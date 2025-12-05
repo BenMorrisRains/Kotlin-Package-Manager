@@ -1,0 +1,286 @@
+package com.kpm.gradle
+
+import com.kpm.model.*
+import java.io.File
+
+class GradleGenerator {
+    
+    fun generateBuildGradle(manifest: KpmManifest, lockfile: KpmLockfile, projectDir: File): String {
+        val builder = StringBuilder()
+        
+        // Plugins
+        builder.appendLine("plugins {")
+        generatePlugins(manifest, builder)
+        builder.appendLine("}")
+        builder.appendLine()
+        
+        // Android configuration
+        manifest.android?.let { android ->
+            generateAndroidConfig(android, builder, manifest)
+        }
+        builder.appendLine()
+        
+        // Repositories
+        builder.appendLine("repositories {")
+        generateRepositories(manifest.repositories, builder)
+        builder.appendLine("}")
+        builder.appendLine()
+        
+        // Dependencies
+        builder.appendLine("dependencies {")
+        generateDependencies(manifest, lockfile, builder)
+        builder.appendLine("}")
+        builder.appendLine()
+        
+        // Kotlin configuration
+        generateKotlinConfig(manifest, builder)
+        
+        return builder.toString()
+    }
+    
+    private fun generatePlugins(manifest: KpmManifest, builder: StringBuilder) {
+        when (manifest.project.type) {
+            ProjectType.ANDROID_APP -> {
+                builder.appendLine("    id(\"com.android.application\") version \"8.2.2\"")
+                builder.appendLine("    id(\"org.jetbrains.kotlin.android\") version \"${manifest.project.kotlinVersion}\"")
+            }
+            ProjectType.ANDROID_LIBRARY -> {
+                builder.appendLine("    id(\"com.android.library\") version \"8.2.2\"")
+                builder.appendLine("    id(\"org.jetbrains.kotlin.android\") version \"${manifest.project.kotlinVersion}\"")
+            }
+            ProjectType.JVM_APPLICATION -> {
+                builder.appendLine("    kotlin(\"jvm\") version \"${manifest.project.kotlinVersion}\"")
+                builder.appendLine("    application")
+            }
+            ProjectType.JVM_LIBRARY -> {
+                builder.appendLine("    kotlin(\"jvm\") version \"${manifest.project.kotlinVersion}\"")
+            }
+            ProjectType.MULTIPLATFORM_LIBRARY -> {
+                builder.appendLine("    kotlin(\"multiplatform\") version \"${manifest.project.kotlinVersion}\"")
+            }
+            ProjectType.KTOR_API -> {
+                builder.appendLine("    kotlin(\"jvm\") version \"${manifest.project.kotlinVersion}\"")
+                builder.appendLine("    application")
+                builder.appendLine("    id(\"io.ktor.plugin\") version \"2.3.6\"")
+            }
+        }
+        
+        // Custom plugins from manifest
+        manifest.plugins.forEach { (_, pluginId) ->
+            builder.appendLine("    id(\"$pluginId\")")
+        }
+    }
+    
+    private fun generateAndroidConfig(android: AndroidConfig, builder: StringBuilder, manifest: KpmManifest) {
+        builder.appendLine("android {")
+        android.namespace?.let { 
+            builder.appendLine("    namespace = \"$it\"")
+        }
+        builder.appendLine("    compileSdk = ${android.compileSdk}")
+        builder.appendLine()
+        builder.appendLine("    defaultConfig {")
+        android.applicationId?.let {
+            builder.appendLine("        applicationId = \"$it\"")
+        }
+        builder.appendLine("        minSdk = ${android.minSdk}")
+        builder.appendLine("        targetSdk = ${android.targetSdk}")
+        builder.appendLine("        versionCode = 1")
+        builder.appendLine("        versionName = \"1.0\"")
+        builder.appendLine("        testInstrumentationRunner = \"androidx.test.runner.AndroidJUnitRunner\"")
+        builder.appendLine("    }")
+        builder.appendLine()
+        builder.appendLine("    buildTypes {")
+        builder.appendLine("        release {")
+        builder.appendLine("            isMinifyEnabled = false")
+        builder.appendLine("            proguardFiles(getDefaultProguardFile(\"proguard-android-optimize.txt\"), \"proguard-rules.pro\")")
+        builder.appendLine("        }")
+        builder.appendLine("    }")
+        builder.appendLine()
+        builder.appendLine("    compileOptions {")
+        builder.appendLine("        sourceCompatibility = JavaVersion.VERSION_17")
+        builder.appendLine("        targetCompatibility = JavaVersion.VERSION_17")
+        builder.appendLine("    }")
+        builder.appendLine()
+        builder.appendLine("    kotlinOptions {")
+        builder.appendLine("        jvmTarget = \"17\"")
+        builder.appendLine("    }")
+        
+        // Add Compose configuration if Compose dependencies are detected
+        val hasCompose = manifest.dependencies.any { it.key.contains("compose") || it.value.contains("compose") }
+        if (hasCompose) {
+            builder.appendLine()
+            builder.appendLine("    buildFeatures {")
+            builder.appendLine("        compose = true")
+            builder.appendLine("    }")
+            builder.appendLine()
+            builder.appendLine("    composeOptions {")
+            builder.appendLine("        kotlinCompilerExtensionVersion = \"1.5.15\"")
+            builder.appendLine("    }")
+        }
+        
+        builder.appendLine("}")
+    }
+    
+    private fun generateRepositories(repositories: RepositoryConfig, builder: StringBuilder) {
+        if (repositories.mavenCentral) {
+            builder.appendLine("    mavenCentral()")
+        }
+        if (repositories.google) {
+            builder.appendLine("    google()")
+        }
+        if (repositories.gradlePluginPortal) {
+            builder.appendLine("    gradlePluginPortal()")
+        }
+        repositories.custom.forEach { repo ->
+            builder.appendLine("    maven { url = uri(\"$repo\") }")
+        }
+    }
+    
+    private fun generateDependencies(manifest: KpmManifest, lockfile: KpmLockfile, builder: StringBuilder) {
+        // Main dependencies
+        manifest.dependencies.forEach { (key, coordinates) ->
+            val resolvedVersion = lockfile.dependencies[coordinates] ?: coordinates
+            if (coordinates.contains("compose-bom") || coordinates.contains("-bom:")) {
+                // Handle BOM (Bill of Materials) dependencies
+                builder.appendLine("    implementation(platform(\"$resolvedVersion\"))")
+            } else {
+                builder.appendLine("    implementation(\"$resolvedVersion\")")
+            }
+        }
+        
+        // Test dependencies
+        manifest.testDependencies.forEach { (key, coordinates) ->
+            val resolvedVersion = lockfile.testDependencies[coordinates] ?: coordinates
+            builder.appendLine("    testImplementation(\"$resolvedVersion\")")
+        }
+        
+        // KAPT dependencies
+        manifest.kaptDependencies.forEach { (key, coordinates) ->
+            val resolvedVersion = lockfile.kaptDependencies[coordinates] ?: coordinates
+            builder.appendLine("    kapt(\"$resolvedVersion\")")
+        }
+        
+        // KSP dependencies
+        manifest.kspDependencies.forEach { (key, coordinates) ->
+            val resolvedVersion = lockfile.kspDependencies[coordinates] ?: coordinates
+            builder.appendLine("    ksp(\"$resolvedVersion\")")
+        }
+        
+        // Add standard Kotlin stdlib
+        builder.appendLine("    implementation(\"org.jetbrains.kotlin:kotlin-stdlib:${manifest.project.kotlinVersion}\")")
+    }
+    
+    private fun generateKotlinConfig(manifest: KpmManifest, builder: StringBuilder) {
+        builder.appendLine("kotlin {")
+        builder.appendLine("    jvmToolchain(17)")
+        builder.appendLine("}")
+        
+        if (manifest.project.type == ProjectType.JVM_APPLICATION || manifest.project.type == ProjectType.KTOR_API) {
+            builder.appendLine()
+            builder.appendLine("application {")
+            val mainClass = when (manifest.project.type) {
+                ProjectType.KTOR_API -> "io.ktor.server.netty.EngineMain"
+                else -> "MainKt"
+            }
+            builder.appendLine("    mainClass.set(\"$mainClass\")")
+            builder.appendLine("}")
+        }
+    }
+    
+    fun generateSettingsGradle(manifest: KpmManifest): String {
+        val builder = StringBuilder()
+        
+        builder.appendLine("rootProject.name = \"${manifest.project.name}\"")
+        builder.appendLine()
+        builder.appendLine("pluginManagement {")
+        builder.appendLine("    repositories {")
+        builder.appendLine("        gradlePluginPortal()")
+        builder.appendLine("        google()")
+        builder.appendLine("        mavenCentral()")
+        builder.appendLine("    }")
+        builder.appendLine("}")
+        
+        return builder.toString()
+    }
+    
+    fun generateGradleWrapper(projectDir: File) {
+        try {
+            // Copy bundled Gradle wrapper files from resources
+            copyGradleWrapperFromResources(projectDir)
+        } catch (e: Exception) {
+            // Fallback: try system gradle command
+            try {
+                val gradleProcess = ProcessBuilder("gradle", "wrapper")
+                    .directory(projectDir)
+                    .redirectErrorStream(true)
+                    .start()
+                
+                val exitCode = gradleProcess.waitFor()
+                
+                if (exitCode != 0) {
+                    createGradleSetupInstructions(projectDir)
+                }
+            } catch (e2: Exception) {
+                createGradleSetupInstructions(projectDir)
+            }
+        }
+    }
+    
+    private fun copyGradleWrapperFromResources(projectDir: File) {
+        val classLoader = this::class.java.classLoader
+        
+        // Create gradle/wrapper directory
+        val wrapperDir = File(projectDir, "gradle/wrapper")
+        wrapperDir.mkdirs()
+        
+        // Copy gradle-wrapper.properties
+        classLoader.getResourceAsStream("gradle-wrapper/wrapper/gradle-wrapper.properties")?.use { input ->
+            File(wrapperDir, "gradle-wrapper.properties").outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        
+        // Copy gradle-wrapper.jar
+        classLoader.getResourceAsStream("gradle-wrapper/wrapper/gradle-wrapper.jar")?.use { input ->
+            File(wrapperDir, "gradle-wrapper.jar").outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        
+        // Copy gradlew script
+        classLoader.getResourceAsStream("gradle-wrapper/gradlew")?.use { input ->
+            val gradlewFile = File(projectDir, "gradlew")
+            gradlewFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+            gradlewFile.setExecutable(true)
+        }
+        
+        // Copy gradlew.bat script
+        classLoader.getResourceAsStream("gradle-wrapper/gradlew.bat")?.use { input ->
+            File(projectDir, "gradlew.bat").outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+    }
+    
+    private fun createGradleSetupInstructions(projectDir: File) {
+        val readmeFile = File(projectDir, "GRADLE_SETUP.md")
+        readmeFile.writeText("""
+            # Gradle Setup Required
+            
+            KPM couldn't automatically set up Gradle wrapper.
+            
+            To complete the project setup, run:
+            
+            ```bash
+            gradle wrapper
+            ```
+            
+            If you don't have Gradle installed, install it first:
+            - macOS: `brew install gradle`
+            - Linux: Use your package manager  
+            - Windows: Download from https://gradle.org/install/
+        """.trimIndent())
+    }
+}

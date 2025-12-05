@@ -1,0 +1,86 @@
+# Gradle
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Kotlin
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Logs
+*.log
+
+# Runtime
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# KPM specific
+*.lock
+local.properties
+
+# Test projects and temporary files
+*Test*/
+*App*/
+TestGlobal/
+GlobalTestApp/
+MemoryTestApp/
+LaunchableApp/
+MyComposeApp/
+FixedComposeApp/
+WorkingAndroidApp/
+SimpleAndroidApp/
+FinalAndroidApp/
+ComposeAppFinal/
+WorkingComposeApp/
+FinalWorkingApp/
+NpmStyleTest/
+CleanCLITest/
+FinalCleanTest/
+SyncTest/
