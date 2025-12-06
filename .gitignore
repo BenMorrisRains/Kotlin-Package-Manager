@@ -2,10 +2,6 @@
 .gradle/
 build/
 gradle-app.setting
-!gradle-wrapper.jar
-!gradle-wrapper.properties
-!gradle/wrapper/gradle-wrapper.jar
-!gradle/wrapper/gradle-wrapper.properties
 
 # IntelliJ IDEA
 .idea/
@@ -28,12 +24,15 @@ Thumbs.db
 
 # Kotlin
 *.class
-*.jar
 *.war
 *.ear
 *.zip
 *.tar.gz
 *.rar
+
+# JAR files (except Gradle wrapper)
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
 
 # Logs
 *.log
