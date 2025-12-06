@@ -312,7 +312,6 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
                 
                 # Android build optimizations
                 android.enableR8.fullMode=true
-                android.enableBuildCache=true
             """.trimIndent())
         }
     }

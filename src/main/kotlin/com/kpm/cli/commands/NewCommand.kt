@@ -477,7 +477,6 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
             
             # Android build optimizations
             android.enableR8.fullMode=true
-            android.enableBuildCache=true
         """.trimIndent())
     }
     

@@ -22,7 +22,6 @@ org.gradle.configureondemand=true
 ```properties
 # Enable R8 full mode for better optimization
 android.enableR8.fullMode=true
-android.enableBuildCache=true
 android.useAndroidX=true
 android.enableJetifier=true
 ```
