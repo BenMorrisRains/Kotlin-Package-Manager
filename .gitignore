@@ -64,6 +64,10 @@ node_modules/
 *.lock
 local.properties
 
+# Release files
+kpm-*.tar.gz
+*.tar.gz
+
 # Test projects and temporary files
 *Test*/
 *App*/
