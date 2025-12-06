@@ -98,7 +98,7 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
             name = name,
             version = "0.1.0",
             type = type,
-            kotlinVersion = if (type == ProjectType.ANDROID_APP || type == ProjectType.ANDROID_LIBRARY) "1.9.25" else "2.0.0"
+            kotlinVersion = "2.0.0"
         )
         
         val android = if (type == ProjectType.ANDROID_APP || type == ProjectType.ANDROID_LIBRARY) {

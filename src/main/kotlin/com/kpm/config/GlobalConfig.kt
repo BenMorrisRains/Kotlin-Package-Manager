@@ -74,7 +74,7 @@ class GlobalConfigManager {
         val defaultConfig = GlobalKpmConfig(
             defaultAuthor = System.getProperty("user.name"),
             defaultLicense = "MIT",
-            defaultKotlinVersion = "1.9.25"
+            defaultKotlinVersion = "2.0.0"
         )
         
         saveGlobalConfig(defaultConfig)
@@ -198,7 +198,7 @@ class GlobalConfigManager {
             [user]
             default_author = "${config.defaultAuthor ?: ""}"
             default_license = "${config.defaultLicense ?: "MIT"}"
-            default_kotlin_version = "${config.defaultKotlinVersion ?: "1.9.25"}"
+            default_kotlin_version = "${config.defaultKotlinVersion ?: "2.0.0"}"
             
             [android]
             sdk_path = "${config.androidSdkPath ?: ""}"

@@ -84,7 +84,7 @@ class ConfigCommand : Command("config", "Manage global KPM configuration") {
         echo("User Settings:")
         echo("   default_author = \"${config.defaultAuthor ?: ""}\"")
         echo("   default_license = \"${config.defaultLicense ?: "MIT"}\"")
-        echo("   default_kotlin_version = \"${config.defaultKotlinVersion ?: "1.9.25"}\"")
+        echo("   default_kotlin_version = \"${config.defaultKotlinVersion ?: "2.0.0"}\"")
         echo("")
         echo("Android Settings:")
         echo("   sdk_path = \"${config.androidSdkPath ?: ""}\"")

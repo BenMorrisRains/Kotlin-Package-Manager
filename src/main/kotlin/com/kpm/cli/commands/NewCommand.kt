@@ -99,7 +99,7 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
             name = name,
             version = "0.1.0",
             type = type,
-            kotlinVersion = globalConfig.defaultKotlinVersion ?: if (type == ProjectType.ANDROID_APP || type == ProjectType.ANDROID_LIBRARY) "1.9.25" else "2.0.0"
+            kotlinVersion = globalConfig.defaultKotlinVersion ?: "2.0.0"
         )
         
         val android = if (type == ProjectType.ANDROID_APP || type == ProjectType.ANDROID_LIBRARY) {
