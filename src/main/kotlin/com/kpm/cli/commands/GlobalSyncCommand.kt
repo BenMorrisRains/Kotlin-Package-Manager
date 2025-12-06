@@ -1,9 +1,11 @@
 package com.kpm.cli.commands
 
+import com.kpm.cli.Command
+import com.kpm.cli.echo
 import com.kpm.config.GlobalConfigManager
 import com.kpm.config.TomlParser
 import com.kpm.gradle.GradleGenerator
-import com.github.ajalt.clikt.core.Command
+import com.kpm.model.KpmLockfile
 import java.io.File
 
 class GlobalSyncCommand : Command("sync-global", "Sync local project with global dependencies") {
@@ -65,8 +67,16 @@ class GlobalSyncCommand : Command("sync-global", "Sync local project with global
             tomlParser.writeManifest(updatedManifest, manifestFile)
             
             // Regenerate Gradle files
+            val lockfileFile = File(currentDir, "kpm.lock")
+            val lockfile = if (lockfileFile.exists()) {
+                tomlParser.parseLockfile(lockfileFile)
+            } else {
+                KpmLockfile()
+            }
+            
             val gradleGenerator = GradleGenerator()
-            gradleGenerator.generateBuildGradle(updatedManifest, currentDir)
+            val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, lockfile, currentDir)
+            File(currentDir, "build.gradle.kts").writeText(buildGradle)
             
             // Show summary
             echo("✅ Project synced with global dependencies!")
