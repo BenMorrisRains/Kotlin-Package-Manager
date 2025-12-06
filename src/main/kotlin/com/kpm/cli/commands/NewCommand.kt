@@ -435,7 +435,7 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
         val manifest = tomlParser.parseManifest(manifestFile)
         
         val composeDependencies = mapOf(
-            "composeBom" to "androidx.compose:compose-bom:2024.10.00"
+            "composeBom" to "androidx.compose:compose-bom:2024.12.01"
         )
         
         val composePlatformDependencies = mapOf(

@@ -32,6 +32,10 @@ fun main(args: Array<String>) {
             showHelp()
             return
         }
+        "--version", "-v", "version" -> {
+            echo(Version.getVersionString())
+            return
+        }
         else -> {
             echo("Unknown command: $commandName", err = true)
             echo("Run 'kpm --help' for usage information", err = true)
@@ -58,7 +62,8 @@ private fun showHelp() {
     println("Kotlin Package Manager")
     println()
     println("Options:")
-    println("  -h, --help  Show this message and exit")
+    println("  -h, --help     Show this message and exit")
+    println("  -v, --version  Show version information and exit")
     println()
     println("Commands:")
     println("  init     Initialize a new KPM project")

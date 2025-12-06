@@ -39,14 +39,22 @@ class GradleGenerator {
     }
     
     private fun generatePlugins(manifest: KpmManifest, builder: StringBuilder) {
+        val hasCompose = manifest.dependencies.keys.any { it.startsWith("compose") || it == "composeBom" }
+        
         when (manifest.project.type) {
             ProjectType.ANDROID_APP -> {
                 builder.appendLine("    id(\"com.android.application\") version \"8.2.2\"")
                 builder.appendLine("    id(\"org.jetbrains.kotlin.android\") version \"${manifest.project.kotlinVersion}\"")
+                if (hasCompose) {
+                    builder.appendLine("    id(\"org.jetbrains.kotlin.plugin.compose\") version \"${manifest.project.kotlinVersion}\"")
+                }
             }
             ProjectType.ANDROID_LIBRARY -> {
                 builder.appendLine("    id(\"com.android.library\") version \"8.2.2\"")
                 builder.appendLine("    id(\"org.jetbrains.kotlin.android\") version \"${manifest.project.kotlinVersion}\"")
+                if (hasCompose) {
+                    builder.appendLine("    id(\"org.jetbrains.kotlin.plugin.compose\") version \"${manifest.project.kotlinVersion}\"")
+                }
             }
             ProjectType.JVM_APPLICATION -> {
                 builder.appendLine("    kotlin(\"jvm\") version \"${manifest.project.kotlinVersion}\"")
