@@ -205,6 +205,9 @@ class ConfigCommand : Command("config", "Manage global KPM configuration") {
         configManager.saveGlobalConfig(updatedConfig)
         echo("✅ Added global dependency: $finalName = \"$finalCoordinate\"")
         echo("This dependency will be included in all new projects")
+        echo("")
+        echo("💡 To add this dependency to existing projects, run:")
+        echo("   kpm sync-global")
     }
     
     private fun resolveNpmStyleDependency(name: String, version: String?): String? {
@@ -293,12 +296,23 @@ class ConfigCommand : Command("config", "Manage global KPM configuration") {
     
     private fun removeGlobalDependency(configManager: GlobalConfigManager, name: String) {
         val currentConfig = configManager.getGlobalConfig()
+        
+        if (!currentConfig.globalDependencies.alwaysInclude.containsKey(name)) {
+            echo("❌ Global dependency '$name' not found", err = true)
+            return
+        }
+        
         val updatedDependencies = currentConfig.globalDependencies.copy(
             alwaysInclude = currentConfig.globalDependencies.alwaysInclude - name
         )
         val updatedConfig = currentConfig.copy(globalDependencies = updatedDependencies)
         configManager.saveGlobalConfig(updatedConfig)
         echo("✅ Removed global dependency: $name")
+        echo("")
+        echo("💡 To sync existing projects with this change, run:")
+        echo("   kpm sync-global")
+        echo("")
+        echo("Or run it in each project directory to remove '$name' from local projects.")
     }
     
     private fun setCustomRegistry(configManager: GlobalConfigManager, name: String, url: String) {

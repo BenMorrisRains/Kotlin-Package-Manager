@@ -174,10 +174,12 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
                 
                 // Create AndroidManifest.xml
                 val androidManifest = File(mainDir, "AndroidManifest.xml")
+                val packageName = "com.example.${name.lowercase().replace("-", "").replace("_", "")}"
                 val themeStyle = if (compose) "@android:style/Theme.Material.Light.NoActionBar" else "@style/Theme.Material3.DayNight"
                 androidManifest.writeText("""
                     <?xml version="1.0" encoding="utf-8"?>
-                    <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+                    <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+                        package="$packageName">
                         <application
                             android:allowBackup="true"
                             android:label="@string/app_name"
@@ -213,7 +215,6 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
                     kotlinDir.mkdirs()
                     
                     val mainActivity = File(kotlinDir, "MainActivity.kt")
-                    val packageName = "com.example.${name.lowercase().replace("-", "").replace("_", "")}"
                     
                     if (compose) {
                         // Create Compose-enabled MainActivity

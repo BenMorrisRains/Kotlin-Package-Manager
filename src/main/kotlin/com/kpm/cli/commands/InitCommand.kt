@@ -160,7 +160,8 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
                 val appPackageName = packageName ?: "com.example.${name.lowercase().replace("-", "").replace("_", "")}"
                 androidManifest.writeText("""
                     <?xml version="1.0" encoding="utf-8"?>
-                    <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+                    <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+                        package="$appPackageName">
                         <application
                             android:allowBackup="true"
                             android:label="@string/app_name"

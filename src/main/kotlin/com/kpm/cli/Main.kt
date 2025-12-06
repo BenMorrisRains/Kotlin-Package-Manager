@@ -27,6 +27,7 @@ fun main(args: Array<String>) {
         "doctor" -> DoctorCommand()
         "android" -> AndroidCommand()
         "config" -> ConfigCommand()
+        "sync-global" -> GlobalSyncCommand()
         "--help", "-h" -> {
             showHelp()
             return
@@ -75,6 +76,7 @@ private fun showHelp() {
     println("  doctor   Check project health and configuration")
     println("  android  Android SDK management")
     println("  config   Manage global KPM configuration")
+    println("  sync-global Sync project with global dependencies")
     println()
     println("Examples:")
     println("  kpm new MyApp --android --compose    # Create Android app with Compose")
