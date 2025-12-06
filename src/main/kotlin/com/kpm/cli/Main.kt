@@ -16,6 +16,7 @@ fun main(args: Array<String>) {
         "new" -> NewCommand()
         "add" -> AddCommand()
         "remove" -> RemoveCommand()
+        "list" -> ListCommand()
         "install" -> InstallCommand()
         "update" -> UpdateCommand()
         "build" -> BuildCommand()
@@ -26,7 +27,6 @@ fun main(args: Array<String>) {
         "doctor" -> DoctorCommand()
         "android" -> AndroidCommand()
         "config" -> ConfigCommand()
-        "sync" -> SyncCommand()
         "--help", "-h" -> {
             showHelp()
             return
@@ -64,9 +64,9 @@ private fun showHelp() {
     println("  new      Create a new project with smart defaults")
     println("  add      Add a dependency to the project")
     println("  remove   Remove a dependency from the project")
+    println("  list     List project dependencies")
     println("  install  Install dependencies")
     println("  update   Update dependencies")
-    println("  sync     Regenerate build files from kpm.toml")
     println("  build    Build the project")
     println("  test     Run tests")
     println("  run      Run the application")

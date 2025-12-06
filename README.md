@@ -18,10 +18,34 @@ A modern package manager for Kotlin projects with zero third-party dependencies.
 
 ## 📦 Installation
 
-### From Source
+### Homebrew (macOS/Linux) - Recommended
 
 ```bash
-git clone https://github.com/your-username/kpm.git
+# Add the KPM tap
+brew tap BenMorrisRains/kpm
+
+# Install KPM
+brew install kpm
+
+# Or install directly in one command
+brew install BenMorrisRains/kpm/kpm
+```
+
+### Manual Installation
+
+#### From GitHub Releases
+```bash
+# Download latest release
+curl -L https://github.com/BenMorrisRains/Kotlin-Package-Manager/releases/latest/download/kpm-1.0.0.tar.gz | tar xz
+export PATH="$PWD/kpm/bin:$PATH"
+
+# Add to your shell profile for permanent installation
+echo 'export PATH="$PWD/kpm/bin:$PATH"' >> ~/.zshrc
+```
+
+#### From Source
+```bash
+git clone https://github.com/BenMorrisRains/Kotlin-Package-Manager.git
 cd kpm
 ./gradlew build
 ./gradlew installDist

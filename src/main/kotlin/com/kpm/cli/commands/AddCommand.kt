@@ -6,7 +6,6 @@ import com.kpm.config.TomlParser
 import com.kpm.gradle.GradleGenerator
 import com.kpm.model.*
 import com.kpm.maven.MavenSearchApi
-import com.kpm.ide.IdeSync
 import java.io.File
 
 class AddCommand : Command("add", "Add a dependency to the project") {
@@ -78,11 +77,6 @@ class AddCommand : Command("add", "Add a dependency to the project") {
         echo("✅ Added $scope dependency: ${dep.coordinates}")
         echo("Updating build.gradle.kts...")
         
-        // Trigger IDE sync
-        val ideSync = IdeSync()
-        ideSync.triggerGradleSync(currentDir)
-        ideSync.createGradleRefreshScript(currentDir)
-        echo("Triggering IDE sync...")
         
         // Automatically sync dependencies (like running kpm install)
         val gradlewFile = File(currentDir, "gradlew")

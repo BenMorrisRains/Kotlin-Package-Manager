@@ -6,7 +6,6 @@ import com.kpm.config.TomlParser
 import com.kpm.gradle.GradleGenerator
 import com.kpm.model.*
 import com.kpm.maven.MavenSearchApi
-import com.kpm.ide.IdeSync
 import java.io.File
 
 class RemoveCommand : Command("remove", "Remove a dependency from the project") {
@@ -65,11 +64,7 @@ class RemoveCommand : Command("remove", "Remove a dependency from the project") 
         echo("✅ Removed dependency: $dependency")
         echo("Updated build.gradle.kts")
         
-        // Trigger IDE sync
-        val ideSync = IdeSync()
-        ideSync.triggerGradleSync(currentDir)
-        ideSync.createGradleRefreshScript(currentDir)
-        echo("Triggering IDE sync...")
+        echo("✅ Dependency removal completed")
     }
 }
 
@@ -282,6 +277,70 @@ class DoctorCommand : Command("doctor", "Check project health and configuration"
             echo("   - Run 'kpm init' to initialize a new project")
             echo("   - Ensure Java 17+ is installed")
             echo("   - Set ANDROID_HOME for Android projects")
+        }
+    }
+}
+
+class ListCommand : Command("list", "List project dependencies") {
+    override fun run() {
+        val currentDir = File(System.getProperty("user.dir"))
+        val manifestFile = File(currentDir, "kpm.toml")
+        
+        if (!manifestFile.exists()) {
+            echo("Error: No kpm.toml found. Run 'kpm init' first.", err = true)
+            return
+        }
+        
+        val tomlParser = TomlParser()
+        val manifest = tomlParser.parseManifest(manifestFile)
+        
+        echo("📦 Project Dependencies (from kpm.toml):")
+        echo("")
+        
+        // Main dependencies
+        if (manifest.dependencies.isNotEmpty()) {
+            echo("Implementation Dependencies:")
+            manifest.dependencies.forEach { (name, coordinates) ->
+                echo("  • $name = \"$coordinates\"")
+            }
+            echo("")
+        }
+        
+        // Test dependencies
+        if (manifest.testDependencies.isNotEmpty()) {
+            echo("Test Dependencies:")
+            manifest.testDependencies.forEach { (name, coordinates) ->
+                echo("  • $name = \"$coordinates\"")
+            }
+            echo("")
+        }
+        
+        // KAPT dependencies
+        if (manifest.kaptDependencies.isNotEmpty()) {
+            echo("KAPT Dependencies:")
+            manifest.kaptDependencies.forEach { (name, coordinates) ->
+                echo("  • $name = \"$coordinates\"")
+            }
+            echo("")
+        }
+        
+        // KSP dependencies
+        if (manifest.kspDependencies.isNotEmpty()) {
+            echo("KSP Dependencies:")
+            manifest.kspDependencies.forEach { (name, coordinates) ->
+                echo("  • $name = \"$coordinates\"")
+            }
+            echo("")
+        }
+        
+        val totalDeps = manifest.dependencies.size + manifest.testDependencies.size + 
+                       manifest.kaptDependencies.size + manifest.kspDependencies.size
+        
+        if (totalDeps == 0) {
+            echo("No dependencies found in this project.")
+            echo("Use 'kpm add <dependency>' to add dependencies.")
+        } else {
+            echo("Total: $totalDeps dependencies")
         }
     }
 }
