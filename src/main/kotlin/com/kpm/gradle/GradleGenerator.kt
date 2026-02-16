@@ -41,7 +41,8 @@ class GradleGenerator {
     
     private fun generatePlugins(manifest: KpmManifest, builder: StringBuilder) {
         val hasCompose = manifest.dependencies.keys.any { it.startsWith("compose") || it == "composeBom" }
-        val agpVersion = getCompatibleAgpVersion()
+        // Use a stable, known-good AGP version compatible with Kotlin 2.x
+        val agpVersion = "8.7.3"
         
         when (manifest.project.type) {
             ProjectType.ANDROID_APP -> {
@@ -97,16 +98,6 @@ class GradleGenerator {
             minor = parts.getOrNull(1) ?: 0,
             patch = parts.getOrNull(2) ?: 0
         )
-    }
-    
-    private fun getCompatibleAgpVersion(): String {
-        // Try to get latest AGP version from Maven
-        return try {
-            val mavenApi = MavenSearchApi()
-            mavenApi.getLatestVersion("com.android.tools.build", "gradle") ?: "8.2.2"
-        } catch (e: Exception) {
-            "8.2.2" // Fallback to known stable version
-        }
     }
     
     private data class Version(val major: Int, val minor: Int, val patch: Int)
