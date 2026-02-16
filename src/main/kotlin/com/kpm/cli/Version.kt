@@ -1,7 +1,7 @@
 package com.kpm.cli
 
 object Version {
-    const val VERSION = "1.0.10"
+    const val VERSION = "1.0.12"
     const val BUILD_DATE = "2026-02-15"
     
     fun getVersionString(): String {
