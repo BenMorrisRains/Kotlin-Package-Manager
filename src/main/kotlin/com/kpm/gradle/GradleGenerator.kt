@@ -1,6 +1,7 @@
 package com.kpm.gradle
 
 import com.kpm.model.*
+import com.kpm.maven.MavenSearchApi
 import java.io.File
 
 class GradleGenerator {
@@ -40,20 +41,21 @@ class GradleGenerator {
     
     private fun generatePlugins(manifest: KpmManifest, builder: StringBuilder) {
         val hasCompose = manifest.dependencies.keys.any { it.startsWith("compose") || it == "composeBom" }
+        val agpVersion = getCompatibleAgpVersion()
         
         when (manifest.project.type) {
             ProjectType.ANDROID_APP -> {
-                builder.appendLine("    id(\"com.android.application\") version \"8.2.2\"")
+                builder.appendLine("    id(\"com.android.application\") version \"$agpVersion\"")
                 builder.appendLine("    id(\"org.jetbrains.kotlin.android\") version \"${manifest.project.kotlinVersion}\"")
                 if (hasCompose) {
-                    builder.appendLine("    id(\"org.jetbrains.kotlin.plugin.compose\") version \"${manifest.project.kotlinVersion}\"")
+                    addComposePlugin(manifest.project.kotlinVersion, builder)
                 }
             }
             ProjectType.ANDROID_LIBRARY -> {
-                builder.appendLine("    id(\"com.android.library\") version \"8.2.2\"")
+                builder.appendLine("    id(\"com.android.library\") version \"$agpVersion\"")
                 builder.appendLine("    id(\"org.jetbrains.kotlin.android\") version \"${manifest.project.kotlinVersion}\"")
                 if (hasCompose) {
-                    builder.appendLine("    id(\"org.jetbrains.kotlin.plugin.compose\") version \"${manifest.project.kotlinVersion}\"")
+                    addComposePlugin(manifest.project.kotlinVersion, builder)
                 }
             }
             ProjectType.JVM_APPLICATION -> {
@@ -78,6 +80,36 @@ class GradleGenerator {
             builder.appendLine("    id(\"$pluginId\")")
         }
     }
+    
+    private fun addComposePlugin(kotlinVersion: String, builder: StringBuilder) {
+        // Kotlin 2.0+ uses the new compose compiler plugin
+        // Kotlin 1.x doesn't need a separate plugin (uses composeOptions in android block)
+        val version = parseVersion(kotlinVersion)
+        if (version.major >= 2) {
+            builder.appendLine("    id(\"org.jetbrains.kotlin.plugin.compose\") version \"$kotlinVersion\"")
+        }
+    }
+    
+    private fun parseVersion(versionString: String): Version {
+        val parts = versionString.split(".").map { it.toIntOrNull() ?: 0 }
+        return Version(
+            major = parts.getOrNull(0) ?: 0,
+            minor = parts.getOrNull(1) ?: 0,
+            patch = parts.getOrNull(2) ?: 0
+        )
+    }
+    
+    private fun getCompatibleAgpVersion(): String {
+        // Try to get latest AGP version from Maven
+        return try {
+            val mavenApi = MavenSearchApi()
+            mavenApi.getLatestVersion("com.android.tools.build", "gradle") ?: "8.2.2"
+        } catch (e: Exception) {
+            "8.2.2" // Fallback to known stable version
+        }
+    }
+    
+    private data class Version(val major: Int, val minor: Int, val patch: Int)
     
     private fun generateAndroidConfig(android: AndroidConfig, builder: StringBuilder, manifest: KpmManifest) {
         builder.appendLine("android {")
