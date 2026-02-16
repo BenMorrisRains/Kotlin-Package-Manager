@@ -149,6 +149,7 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
             ProjectType.KTOR_API -> mapOf(
                 "ktorServerCore" to "io.ktor:ktor-server-core:2.3.6",
                 "ktorServerNetty" to "io.ktor:ktor-server-netty:2.3.6",
+                "ktorServerContentNegotiation" to "io.ktor:ktor-server-content-negotiation:2.3.6",
                 "ktorSerialization" to "io.ktor:ktor-serialization-kotlinx-json:2.3.6",
                 "logback" to "ch.qos.logback:logback-classic:1.4.11"
             )

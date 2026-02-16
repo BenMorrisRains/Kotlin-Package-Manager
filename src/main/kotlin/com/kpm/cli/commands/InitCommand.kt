@@ -136,7 +136,9 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
             ProjectType.KTOR_API -> mapOf(
                 "ktorServerCore" to "io.ktor:ktor-server-core:2.3.6",
                 "ktorServerNetty" to "io.ktor:ktor-server-netty:2.3.6",
-                "ktorSerialization" to "io.ktor:ktor-serialization-kotlinx-json:2.3.6"
+                "ktorServerContentNegotiation" to "io.ktor:ktor-server-content-negotiation:2.3.6",
+                "ktorSerialization" to "io.ktor:ktor-serialization-kotlinx-json:2.3.6",
+                "logback" to "ch.qos.logback:logback-classic:1.4.11"
             )
             else -> emptyMap()
         }
@@ -234,15 +236,28 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
                         import io.ktor.server.netty.*
                         import io.ktor.server.response.*
                         import io.ktor.server.routing.*
+                        import io.ktor.serialization.kotlinx.json.*
+                        import io.ktor.server.plugins.contentnegotiation.*
                         
                         fun main() {
-                            embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
-                                routing {
-                                    get("/") {
-                                        call.respondText("Hello, KPM Ktor API!")
-                                    }
+                            embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
+                                .start(wait = true)
+                        }
+                        
+                        fun Application.module() {
+                            install(ContentNegotiation) {
+                                json()
+                            }
+                            
+                            routing {
+                                get("/") {
+                                    call.respondText("Hello, KPM Ktor API!")
                                 }
-                            }.start(wait = true)
+                                
+                                get("/health") {
+                                    call.respondText("OK")
+                                }
+                            }
                         }
                     """.trimIndent())
                 }

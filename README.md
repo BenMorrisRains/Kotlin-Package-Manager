@@ -2,21 +2,21 @@
 
 A modern package manager for Kotlin projects with zero third-party dependencies. Built for Android and JVM development with npm-like simplicity.
 
-## ✨ Features
+## Features
 
-- **🚀 Zero Dependencies**: No external libraries required
-- **📱 Android First**: Full Android SDK integration and Compose support
-- **🎯 NPM-Like Experience**: `kpm add picasso` automatically resolves latest versions
-- **🔍 Smart Search**: Live Maven Central API integration
-- **🛠️ Custom CLI Framework**: Built-in command-line interface
-- **📝 Custom TOML Parser**: Parse project manifests without external deps
-- **⚡ Gradle Integration**: Automatic build.gradle.kts generation and sync
-- **🎨 Project Templates**: Initialize projects with sensible defaults
-- **🌐 Maven Central Integration**: Search and add dependencies seamlessly
-- **🌍 Global Configuration**: npm/bun/pip-like global config with dependencies and registries
-- **🔄 IDE Auto-Sync**: Automatically triggers IDE Gradle sync after dependency changes
+- **Zero Dependencies**: No external libraries required
+- **Android First**: Full Android SDK integration and Compose support
+- **NPM-Like Experience**: `kpm add picasso` automatically resolves latest versions
+- **Smart Search**: Live Maven Central API integration
+- **Custom CLI Framework**: Built-in command-line interface
+- **Custom TOML Parser**: Parse project manifests without external deps
+- **Gradle Integration**: Automatic build.gradle.kts generation and sync
+- **Project Templates**: Initialize projects with sensible defaults
+- **Maven Central Integration**: Search and add dependencies seamlessly
+- **Global Configuration**: npm/bun/pip-like global config with dependencies and registries
+- **IDE Auto-Sync**: Automatically triggers IDE Gradle sync after dependency changes
 
-## 📦 Installation
+## Installation
 
 ### Homebrew (macOS/Linux) - Recommended
 
@@ -50,9 +50,12 @@ cd kpm
 ./gradlew build
 ./gradlew installDist
 export PATH="$PATH:$(pwd)/build/install/kpm/bin"
+
+# Or use the local build directly
+./build/install/kpm/bin/kpm --version
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Create Projects with Smart Defaults
 
@@ -123,7 +126,7 @@ kpm config list
 kpm new MyApp --android  # ← Includes timber & retrofit automatically
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ### JVM Application
 ```
@@ -186,7 +189,38 @@ corporate = "https://nexus.company.com/maven-public/"
 jitpack = "https://jitpack.io"
 ```
 
-## 🛠️ Commands
+### Project Configuration (kpm.toml)
+
+Example Android application configuration:
+```toml
+[project]
+name = "my-android-app"
+version = "0.1.0"
+type = "android-app"
+kotlin_version = "2.0.0"
+
+[android]
+application_id = "com.example.myapp"
+min_sdk = 24
+target_sdk = 35
+compile_sdk = 35
+namespace = "com.example.myapp"
+
+[repositories]
+maven_central = true
+google = true
+gradle_plugin_portal = false
+
+[dependencies]
+coreKtx = "androidx.core:core-ktx:1.13.+"
+appcompat = "androidx.appcompat:appcompat:1.6.+"
+material = "com.google.android.material:material:1.11.+"
+
+[test_dependencies]
+junit = "junit:junit:4.13.2"
+```
+
+## Commands
 
 ### Project Creation
 - `kpm new <name> [--android] [--compose] [--ktor] [--library]` - Create project with smart defaults
@@ -220,7 +254,31 @@ jitpack = "https://jitpack.io"
 - `kpm android detect` - Detect Android SDK
 - `kpm android setup` - Setup Android SDK for current project
 
-## 📱 Android Support
+## Project Types
+
+KPM supports multiple project types with the `kpm init` command:
+
+### Android Application
+```bash
+kpm init --name MyAndroidApp --type android-app --package com.example.app
+```
+
+### Android Library
+```bash
+kpm init --name MyLibrary --type android-library --package com.example.lib
+```
+
+### JVM Application
+```bash
+kpm init --name MyJvmApp --type jvm-application
+```
+
+### Ktor API
+```bash
+kpm init --name MyApi --type ktor-api
+```
+
+## Android Support
 
 KPM provides first-class Android development support:
 
@@ -228,8 +286,8 @@ KPM provides first-class Android development support:
 ```bash
 # KPM automatically finds and configures your Android SDK
 kpm new MyApp --android
-# ✅ Found Android SDK at: /Users/you/Library/Android/sdk
-# ✅ Android SDK configured for project
+# Found Android SDK at: /Users/you/Library/Android/sdk
+# Android SDK configured for project
 ```
 
 ### Android SDK Management
@@ -249,7 +307,7 @@ kpm new MyApp --android --compose
 # - Proper build configuration
 ```
 
-## 🎯 Popular Libraries (NPM-Style)
+## Popular Libraries (NPM-Style)
 
 KPM knows about 40+ popular libraries for instant resolution:
 
@@ -260,16 +318,17 @@ KPM knows about 40+ popular libraries for instant resolution:
 | `kpm add retrofit` | com.squareup.retrofit2:retrofit:2.9.0 | HTTP client |
 | `kpm add okhttp` | com.squareup.okhttp3:okhttp:4.12.0 | HTTP client |
 | `kpm add gson` | com.google.code.gson:gson:2.10.1 | JSON parsing |
-| `kpm add hilt` | com.google.dagger:hilt-android:2.48.1 | Dependency injection |
+| `kpm add hilt` | com.google.dagger:hilt-android:2.48 | Dependency injection |
 | `kpm add room` | androidx.room:room-runtime:2.6.1 | Database |
-| `kpm add coroutines` | org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3 | Async programming |
+| `kpm add coroutines` | org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3 | Async programming |
 | `kpm add timber` | com.jakewharton.timber:timber:5.0.1 | Logging |
 | `kpm add junit` | junit:junit:4.13.2 | Testing |
 | `kpm add mockito` | org.mockito:mockito-core:5.7.0 | Mocking |
+| `kpm add compose-bom` | androidx.compose:compose-bom:2024.10.00 | Compose BOM |
 
 *Don't see your library? KPM will search Maven Central automatically!*
 
-## 🔄 Complete Workflow Example
+## Complete Workflow Example
 
 ### Android App with Modern Stack
 
@@ -296,8 +355,8 @@ kpm add mockito --test
 kpm add espresso --test
 
 # 4. Build and run (everything auto-configured!)
-kpm build               # ✅ BUILD SUCCESSFUL
-kpm run                 # 🚀 App launches
+kpm build               # BUILD SUCCESSFUL
+kpm run                 # App launches
 ```
 
 ### Ktor API Server
@@ -317,21 +376,21 @@ kpm build
 kpm run                 # Server starts on http://localhost:8080
 ```
 
-## 🆚 Comparison with Other Tools
+## Comparison with Other Tools
 
 | Feature | KPM | Gradle | Maven |
 |---------|-----|--------|-------|
 | **Setup Time** | Instant | Manual setup required | Manual setup required |
 | **Android Support** | Built-in SDK detection | Manual configuration | Limited support |
 | **Dependency Resolution** | `kpm add picasso` | Manual coordinates | Manual coordinates |
-| **Zero Config** | ✅ | ❌ | ❌ |
-| **Live Search** | ✅ Maven Central API | ❌ | ❌ |
-| **Auto Gradle Sync** | ✅ | Manual | N/A |
-| **Global Configuration** | ✅ npm/bun/pip-like | ❌ | ❌ |
-| **Global Dependencies** | ✅ `config add-global` | ❌ | ❌ |
-| **IDE Auto-Sync** | ✅ IntelliJ/VS Code/Android Studio | ❌ | ❌ |
+| **Zero Config** | Yes | No | No |
+| **Live Search** | Yes - Maven Central API | No | No |
+| **Auto Gradle Sync** | Yes | Manual | N/A |
+| **Global Configuration** | Yes - npm/bun/pip-like | No | No |
+| **Global Dependencies** | Yes - `config add-global` | No | No |
+| **IDE Auto-Sync** | Yes - IntelliJ/VS Code/Android Studio | No | No |
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -339,7 +398,7 @@ kpm run                 # Server starts on http://localhost:8080
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## ✅ Recently Completed
+## Recently Completed
 
 - [x] **Global Configuration**: npm/bun/pip-like global config system
 - [x] **Global Dependencies**: `kpm config add-global` for dependencies in all projects
@@ -348,7 +407,7 @@ kpm run                 # Server starts on http://localhost:8080
 - [x] **Android Compose Support**: Full scaffolding with proper build configuration
 - [x] **IDE Auto-Sync**: Automatic IDE Gradle sync after dependency changes
 
-## 📋 Roadmap
+## Roadmap
 
 - [ ] **Version Management**: `kpm update` with semantic versioning
 - [ ] **Dependency Graph**: Visual dependency analysis

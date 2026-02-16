@@ -242,21 +242,27 @@ class GradleGenerator {
         wrapperDir.mkdirs()
         
         // Copy gradle-wrapper.properties
-        classLoader.getResourceAsStream("gradle-wrapper/wrapper/gradle-wrapper.properties")?.use { input ->
+        val propertiesStream = classLoader.getResourceAsStream("gradle-wrapper/wrapper/gradle-wrapper.properties")
+            ?: throw IllegalStateException("gradle-wrapper.properties resource not found")
+        propertiesStream.use { input ->
             File(wrapperDir, "gradle-wrapper.properties").outputStream().use { output ->
                 input.copyTo(output)
             }
         }
         
         // Copy gradle-wrapper.jar
-        classLoader.getResourceAsStream("gradle-wrapper/wrapper/gradle-wrapper.jar")?.use { input ->
+        val jarStream = classLoader.getResourceAsStream("gradle-wrapper/wrapper/gradle-wrapper.jar")
+            ?: throw IllegalStateException("gradle-wrapper.jar resource not found")
+        jarStream.use { input ->
             File(wrapperDir, "gradle-wrapper.jar").outputStream().use { output ->
                 input.copyTo(output)
             }
         }
         
         // Copy gradlew script
-        classLoader.getResourceAsStream("gradle-wrapper/gradlew")?.use { input ->
+        val gradlewStream = classLoader.getResourceAsStream("gradle-wrapper/gradlew")
+            ?: throw IllegalStateException("gradlew resource not found")
+        gradlewStream.use { input ->
             val gradlewFile = File(projectDir, "gradlew")
             gradlewFile.outputStream().use { output ->
                 input.copyTo(output)
@@ -265,10 +271,17 @@ class GradleGenerator {
         }
         
         // Copy gradlew.bat script
-        classLoader.getResourceAsStream("gradle-wrapper/gradlew.bat")?.use { input ->
+        val gradlewBatStream = classLoader.getResourceAsStream("gradle-wrapper/gradlew.bat")
+            ?: throw IllegalStateException("gradlew.bat resource not found")
+        gradlewBatStream.use { input ->
             File(projectDir, "gradlew.bat").outputStream().use { output ->
                 input.copyTo(output)
             }
+        }
+        
+        // Verify files were created
+        if (!File(projectDir, "gradlew").exists()) {
+            throw IllegalStateException("Failed to create gradlew file")
         }
     }
     
