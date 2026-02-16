@@ -28,25 +28,14 @@ jobs:
         ./gradlew build
         ./gradlew test
     
-    - name: Create distribution
-      run: ./gradlew installDist
-    
-    - name: Create release tarball
+    - name: Extract version
       run: |
         VERSION=${GITHUB_REF#refs/tags/v}
-        tar -czf kpm-$VERSION.tar.gz -C build/install kpm/
         echo "VERSION=$VERSION" >> $GITHUB_ENV
-    
-    - name: Calculate SHA256
-      run: |
-        SHA256=$(shasum -a 256 kpm-$VERSION.tar.gz | cut -d' ' -f1)
-        echo "SHA256=$SHA256" >> $GITHUB_ENV
-        echo "SHA256: $SHA256"
     
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: kpm-${{ env.VERSION }}.tar.gz
         generate_release_notes: true
         body: |
           ## Installation
@@ -58,16 +47,26 @@ jobs:
           
           ### Manual Installation
           ```bash
-          curl -L https://github.com/BenMorrisRains/Kotlin-Package-Manager/releases/download/v${{ env.VERSION }}/kpm-${{ env.VERSION }}.tar.gz | tar xz
-          export PATH="$PWD/kpm/bin:$PATH"
-          ```
-          
-          ## SHA256
-          ```
-          ${{ env.SHA256 }}
+          curl -L https://github.com/BenMorrisRains/Kotlin-Package-Manager/archive/v${{ env.VERSION }}.tar.gz | tar xz
+          cd Kotlin-Package-Manager-${{ env.VERSION }}
+          ./gradlew installDist
+          export PATH="$PWD/build/install/kpm/bin:$PATH"
           ```
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Calculate SHA256 from GitHub source archive
+      run: |
+        # Wait a moment for GitHub to generate the source archive
+        sleep 5
+        
+        # Download the source archive that GitHub automatically creates
+        curl -L https://github.com/BenMorrisRains/Kotlin-Package-Manager/archive/v$VERSION.tar.gz -o kpm-$VERSION.tar.gz
+        
+        # Calculate SHA256
+        SHA256=$(shasum -a 256 kpm-$VERSION.tar.gz | cut -d' ' -f1)
+        echo "SHA256=$SHA256" >> $GITHUB_ENV
+        echo "📦 Source archive SHA256: $SHA256"
     
     - name: Update Homebrew Formula
       run: |
