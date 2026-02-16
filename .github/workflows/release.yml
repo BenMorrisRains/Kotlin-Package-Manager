@@ -69,13 +69,27 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Output Homebrew Information
+    - name: Update Homebrew Formula
       run: |
-        echo " Homebrew Formula Update Required"
-        echo "Repository: https://github.com/BenMorrisRains/homebrew-kpm"
-        echo "Update kpm.rb with:"
-        echo "  Version: v$VERSION"
-        echo "  SHA256: $SHA256"
-        echo ""
-        echo "Or use the update script:"
-        echo "./scripts/update-homebrew-formula.sh $VERSION $SHA256"
+        echo "🍺 Updating Homebrew formula..."
+        
+        # Clone homebrew-kpm repository
+        git clone https://github.com/BenMorrisRains/homebrew-kpm.git /tmp/homebrew-kpm
+        cd /tmp/homebrew-kpm
+        
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Update the formula
+        sed -i "s|archive/v.*\.tar\.gz|archive/v$VERSION.tar.gz|g" kpm.rb
+        sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/g" kpm.rb
+        
+        # Commit and push changes
+        git add kpm.rb
+        git commit -m "Update KPM to v$VERSION" || echo "No changes to commit"
+        git push https://x-access-token:${{ secrets.HOMEBREW_TAP_TOKEN }}@github.com/BenMorrisRains/homebrew-kpm.git main
+        
+        echo "✅ Homebrew formula updated successfully!"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
