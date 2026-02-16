@@ -30,10 +30,14 @@ class AddCommand : Command("add", "Add a dependency to the project") {
         // Parse dependency
         val dep = try {
             if (":" in dependency) {
-                Dependency.parse(dependency)
+                val parsed = Dependency.parse(dependency)
+                if (!confirmDependency(parsed, dependency)) {
+                    return
+                }
+                parsed
             } else {
-                // Try to resolve shorthand
-                resolveShorthandDependency(dependency)
+                // Try to resolve shorthand with confirmation
+                resolveShorthandDependencyInteractive(dependency) ?: return
             }
         } catch (e: Exception) {
             echo("Error: Invalid dependency format. Use group:artifact:version or just artifact name", err = true)
@@ -172,5 +176,80 @@ class AddCommand : Command("add", "Add a dependency to the project") {
         }
         
         throw IllegalArgumentException("Could not find artifact '$shorthand' in Maven Central or built-in mappings")
+    }
+    
+    private fun confirmDependency(dep: Dependency, originalInput: String): Boolean {
+        echo("")
+        echo("Found dependency: ${dep.coordinates}")
+        print("Add this dependency? (y/n): ")
+        
+        val response = readLine()?.trim()?.lowercase()
+        return when (response) {
+            "y", "yes" -> true
+            "n", "no" -> {
+                echo("Dependency not added.")
+                false
+            }
+            else -> {
+                echo("Invalid response. Dependency not added.")
+                false
+            }
+        }
+    }
+    
+    private fun resolveShorthandDependencyInteractive(shorthand: String): Dependency? {
+        var searchTerm = shorthand
+        
+        while (true) {
+            val dep = try {
+                resolveShorthandDependency(searchTerm)
+            } catch (e: Exception) {
+                echo("")
+                echo("Could not find artifact '$searchTerm'.")
+                print("Would you like to search with a different term? (y/n): ")
+                
+                val retry = readLine()?.trim()?.lowercase()
+                if (retry == "y" || retry == "yes") {
+                    print("Enter search term: ")
+                    val newTerm = readLine()?.trim()
+                    if (newTerm.isNullOrBlank()) {
+                        echo("No search term provided. Aborting.")
+                        return null
+                    }
+                    searchTerm = newTerm
+                    continue
+                } else {
+                    return null
+                }
+            }
+            
+            // Confirm the found dependency
+            echo("")
+            echo("Found: ${dep.coordinates}")
+            print("Is this the correct dependency? (y/n/s for search again): ")
+            
+            val response = readLine()?.trim()?.lowercase()
+            when (response) {
+                "y", "yes" -> return dep
+                "n", "no" -> {
+                    echo("Dependency not added.")
+                    return null
+                }
+                "s", "search" -> {
+                    print("Enter new search term: ")
+                    val newTerm = readLine()?.trim()
+                    if (newTerm.isNullOrBlank()) {
+                        echo("No search term provided. Aborting.")
+                        return null
+                    }
+                    searchTerm = newTerm
+                    continue
+                }
+                else -> {
+                    echo("Invalid response. Dependency not added.")
+                    return null
+                }
+            }
+        }
     }
 }
