@@ -64,6 +64,9 @@ node_modules/
 *.lock
 local.properties
 
+# Auto-generated version file
+src/main/kotlin/com/kpm/cli/Version.kt
+
 # Release files
 kpm-*.tar.gz
 *.tar.gz
