@@ -47,7 +47,9 @@ class TomlParser {
             name = projectSection["name"] ?: error("Missing project name"),
             version = projectSection["version"] ?: error("Missing project version"),
             type = parseProjectType(projectSection["type"] ?: error("Missing project type")),
-            kotlinVersion = projectSection["kotlin_version"] ?: "2.0.0"
+            kotlinVersion = projectSection["kotlin_version"] ?: "2.0.0",
+            gradleVersion = projectSection["gradle_version"] ?: "8.5",
+            agpVersion = projectSection["agp_version"]
         )
         
         val android = sections["android"]?.let { androidSection ->
@@ -106,6 +108,8 @@ class TomlParser {
         builder.appendLine("version = \"${manifest.project.version}\"")
         builder.appendLine("type = \"${manifest.project.type.name.lowercase().replace("_", "-")}\"")
         builder.appendLine("kotlin_version = \"${manifest.project.kotlinVersion}\"")
+        builder.appendLine("gradle_version = \"${manifest.project.gradleVersion}\"")
+        manifest.project.agpVersion?.let { builder.appendLine("agp_version = \"$it\"") }
         builder.appendLine()
         
         // Android section

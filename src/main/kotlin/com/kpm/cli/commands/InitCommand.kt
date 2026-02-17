@@ -34,7 +34,18 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
         projectDir.mkdirs()
         
         val parsedProjectType = parseProjectType(type)
-        val manifest = createManifest(name, parsedProjectType, packageName)
+        
+        // Prompt for Gradle version
+        echo("")
+        val gradleVersion = promptForGradleVersion()
+        
+        // Prompt for AGP version if Android project
+        val agpVersion = if (parsedProjectType == ProjectType.ANDROID_APP || parsedProjectType == ProjectType.ANDROID_LIBRARY) {
+            promptForAgpVersion()
+        } else null
+        
+        echo("")
+        val manifest = createManifest(name, parsedProjectType, packageName, gradleVersion, agpVersion)
         
         // Create project structure
         createProjectStructure(projectDir, parsedProjectType)
@@ -52,7 +63,7 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
         File(projectDir, "settings.gradle.kts").writeText(settingsGradle)
         
         // Generate Gradle wrapper
-        gradleGenerator.generateGradleWrapper(projectDir)
+        gradleGenerator.generateGradleWrapper(projectDir, manifest.project.gradleVersion)
         
         // Create empty lockfile
         tomlParser.writeLockfile(KpmLockfile(), File(projectDir, "kpm.lock"))
@@ -93,12 +104,72 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
         }
     }
     
-    private fun createManifest(name: String, type: ProjectType, packageName: String?): KpmManifest {
+    private fun promptForGradleVersion(): String {
+        echo("Select Gradle version:")
+        echo("  1) 8.5 (recommended)")
+        echo("  2) 8.6")
+        echo("  3) 8.7")
+        echo("  4) 8.8")
+        echo("  5) 8.9")
+        echo("  6) 8.10")
+        echo("  7) Custom version")
+        print("Enter choice [1-7] (default: 1): ")
+        
+        val choice = readlnOrNull()?.trim() ?: "1"
+        return when (choice) {
+            "1", "" -> "8.5"
+            "2" -> "8.6"
+            "3" -> "8.7"
+            "4" -> "8.8"
+            "5" -> "8.9"
+            "6" -> "8.10"
+            "7" -> {
+                print("Enter Gradle version: ")
+                readlnOrNull()?.trim() ?: "8.5"
+            }
+            else -> {
+                echo("Invalid choice, using default: 8.5")
+                "8.5"
+            }
+        }
+    }
+    
+    private fun promptForAgpVersion(): String {
+        echo("Select Android Gradle Plugin (AGP) version:")
+        echo("  1) 8.7.3 (recommended, compatible with Gradle 8.5+)")
+        echo("  2) 8.6.0")
+        echo("  3) 8.5.0")
+        echo("  4) 8.4.0")
+        echo("  5) 8.3.0")
+        echo("  6) Custom version")
+        print("Enter choice [1-6] (default: 1): ")
+        
+        val choice = readlnOrNull()?.trim() ?: "1"
+        return when (choice) {
+            "1", "" -> "8.7.3"
+            "2" -> "8.6.0"
+            "3" -> "8.5.0"
+            "4" -> "8.4.0"
+            "5" -> "8.3.0"
+            "6" -> {
+                print("Enter AGP version: ")
+                readlnOrNull()?.trim() ?: "8.7.3"
+            }
+            else -> {
+                echo("Invalid choice, using default: 8.7.3")
+                "8.7.3"
+            }
+        }
+    }
+    
+    private fun createManifest(name: String, type: ProjectType, packageName: String?, gradleVersion: String, agpVersion: String?): KpmManifest {
         val project = ProjectConfig(
             name = name,
             version = "0.1.0",
             type = type,
-            kotlinVersion = "2.0.0"
+            kotlinVersion = "2.0.0",
+            gradleVersion = gradleVersion,
+            agpVersion = agpVersion
         )
         
         val android = if (type == ProjectType.ANDROID_APP || type == ProjectType.ANDROID_LIBRARY) {

@@ -15,7 +15,9 @@ data class ProjectConfig(
     val name: String,
     val version: String,
     val type: ProjectType,
-    val kotlinVersion: String = "2.0.0"
+    val kotlinVersion: String = "2.0.0",
+    val gradleVersion: String = "8.5",
+    val agpVersion: String? = null
 )
 
 enum class ProjectType {

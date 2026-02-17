@@ -41,8 +41,8 @@ class GradleGenerator {
     
     private fun generatePlugins(manifest: KpmManifest, builder: StringBuilder) {
         val hasCompose = manifest.dependencies.keys.any { it.startsWith("compose") || it == "composeBom" }
-        // Use a stable, known-good AGP version compatible with Kotlin 2.x
-        val agpVersion = "8.7.3"
+        // Use AGP version from manifest, fallback to 8.7.3 if not specified
+        val agpVersion = manifest.project.agpVersion ?: "8.7.3"
         
         when (manifest.project.type) {
             ProjectType.ANDROID_APP -> {
@@ -234,14 +234,14 @@ class GradleGenerator {
         return builder.toString()
     }
     
-    fun generateGradleWrapper(projectDir: File) {
+    fun generateGradleWrapper(projectDir: File, gradleVersion: String = "8.5") {
         try {
             // Copy bundled Gradle wrapper files from resources
-            copyGradleWrapperFromResources(projectDir)
+            copyGradleWrapperFromResources(projectDir, gradleVersion)
         } catch (e: Exception) {
             // Fallback: try system gradle command
             try {
-                val gradleProcess = ProcessBuilder("gradle", "wrapper")
+                val gradleProcess = ProcessBuilder("gradle", "wrapper", "--gradle-version", gradleVersion)
                     .directory(projectDir)
                     .redirectErrorStream(true)
                     .start()
@@ -257,21 +257,24 @@ class GradleGenerator {
         }
     }
     
-    private fun copyGradleWrapperFromResources(projectDir: File) {
+    private fun copyGradleWrapperFromResources(projectDir: File, gradleVersion: String) {
         val classLoader = this::class.java.classLoader
         
         // Create gradle/wrapper directory
         val wrapperDir = File(projectDir, "gradle/wrapper")
         wrapperDir.mkdirs()
         
-        // Copy gradle-wrapper.properties
-        val propertiesStream = classLoader.getResourceAsStream("gradle-wrapper/wrapper/gradle-wrapper.properties")
-            ?: throw IllegalStateException("gradle-wrapper.properties resource not found")
-        propertiesStream.use { input ->
-            File(wrapperDir, "gradle-wrapper.properties").outputStream().use { output ->
-                input.copyTo(output)
-            }
-        }
+        // Generate gradle-wrapper.properties with specified version
+        val propertiesContent = """
+            distributionBase=GRADLE_USER_HOME
+            distributionPath=wrapper/dists
+            distributionUrl=https\://services.gradle.org/distributions/gradle-$gradleVersion-bin.zip
+            networkTimeout=10000
+            validateDistributionUrl=true
+            zipStoreBase=GRADLE_USER_HOME
+            zipStorePath=wrapper/dists
+        """.trimIndent()
+        File(wrapperDir, "gradle-wrapper.properties").writeText(propertiesContent)
         
         // Copy gradle-wrapper.jar
         val jarStream = classLoader.getResourceAsStream("gradle-wrapper/wrapper/gradle-wrapper.jar")
