@@ -32,8 +32,8 @@ enum class ProjectType {
 data class AndroidConfig(
     val applicationId: String? = null,
     val minSdk: Int = 24,
-    val targetSdk: Int = 35,
-    val compileSdk: Int = 35,
+    val targetSdk: Int = 36,
+    val compileSdk: Int = 36,
     val namespace: String? = null
 )
 

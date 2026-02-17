@@ -7,6 +7,130 @@ import java.io.File
 class GradleGenerator {
     
     fun generateBuildGradle(manifest: KpmManifest, lockfile: KpmLockfile, projectDir: File): String {
+        // For Android projects, use modern multi-module structure with version catalog
+        if (manifest.project.type == ProjectType.ANDROID_APP || manifest.project.type == ProjectType.ANDROID_LIBRARY) {
+            return generateModernAndroidBuildGradle(manifest)
+        }
+        
+        // For non-Android projects, use traditional structure
+        return generateTraditionalBuildGradle(manifest, lockfile)
+    }
+    
+    private fun generateModernAndroidBuildGradle(manifest: KpmManifest): String {
+        val builder = StringBuilder()
+        
+        // Root build.gradle.kts for Android projects
+        builder.appendLine("// Top-level build file where you can add configuration options common to all sub-projects/modules.")
+        builder.appendLine("plugins {")
+        
+        val pluginType = if (manifest.project.type == ProjectType.ANDROID_APP) "application" else "library"
+        builder.appendLine("    alias(libs.plugins.android.$pluginType) apply false")
+        builder.appendLine("    alias(libs.plugins.kotlin.android) apply false")
+        
+        val hasCompose = manifest.dependencies.keys.any { it.startsWith("compose") || it == "composeBom" }
+        if (hasCompose) {
+            builder.appendLine("    alias(libs.plugins.kotlin.compose) apply false")
+        }
+        
+        builder.appendLine("}")
+        
+        return builder.toString()
+    }
+    
+    fun generateAppBuildGradle(manifest: KpmManifest): String {
+        val builder = StringBuilder()
+        
+        // App module build.gradle.kts
+        builder.appendLine("plugins {")
+        
+        val pluginType = if (manifest.project.type == ProjectType.ANDROID_APP) "application" else "library"
+        builder.appendLine("    alias(libs.plugins.android.$pluginType)")
+        builder.appendLine("    alias(libs.plugins.kotlin.android)")
+        
+        val hasCompose = manifest.dependencies.keys.any { it.startsWith("compose") || it == "composeBom" }
+        if (hasCompose) {
+            builder.appendLine("    alias(libs.plugins.kotlin.compose)")
+        }
+        
+        builder.appendLine("}")
+        builder.appendLine()
+        
+        // Android configuration
+        manifest.android?.let { android ->
+            generateModernAndroidConfig(android, builder, hasCompose)
+        }
+        builder.appendLine()
+        
+        // Dependencies using version catalog
+        builder.appendLine("dependencies {")
+        generateModernDependencies(manifest, builder)
+        builder.appendLine("}")
+        
+        return builder.toString()
+    }
+    
+    private fun generateModernAndroidConfig(android: AndroidConfig, builder: StringBuilder, hasCompose: Boolean) {
+        builder.appendLine("android {")
+        android.namespace?.let { 
+            builder.appendLine("    namespace = \"$it\"")
+        }
+        builder.appendLine("    compileSdk = ${android.compileSdk}")
+        builder.appendLine()
+        builder.appendLine("    defaultConfig {")
+        android.applicationId?.let {
+            builder.appendLine("        applicationId = \"$it\"")
+        }
+        builder.appendLine("        minSdk = ${android.minSdk}")
+        builder.appendLine("        targetSdk = ${android.targetSdk}")
+        builder.appendLine("        versionCode = 1")
+        builder.appendLine("        versionName = \"1.0\"")
+        builder.appendLine("        testInstrumentationRunner = \"androidx.test.runner.AndroidJUnitRunner\"")
+        builder.appendLine("    }")
+        builder.appendLine()
+        builder.appendLine("    buildTypes {")
+        builder.appendLine("        release {")
+        builder.appendLine("            isMinifyEnabled = false")
+        builder.appendLine("            proguardFiles(")
+        builder.appendLine("                getDefaultProguardFile(\"proguard-android-optimize.txt\"),")
+        builder.appendLine("                \"proguard-rules.pro\"")
+        builder.appendLine("            )")
+        builder.appendLine("        }")
+        builder.appendLine("    }")
+        builder.appendLine()
+        builder.appendLine("    compileOptions {")
+        builder.appendLine("        sourceCompatibility = JavaVersion.VERSION_11")
+        builder.appendLine("        targetCompatibility = JavaVersion.VERSION_11")
+        builder.appendLine("    }")
+        
+        if (hasCompose) {
+            builder.appendLine()
+            builder.appendLine("    buildFeatures {")
+            builder.appendLine("        compose = true")
+            builder.appendLine("    }")
+        }
+        
+        builder.appendLine("}")
+    }
+    
+    private fun generateModernDependencies(manifest: KpmManifest, builder: StringBuilder) {
+        // Main dependencies using version catalog aliases
+        manifest.dependencies.forEach { (key, _) ->
+            val libKey = key.replace(Regex("[A-Z]"), { "-${it.value.lowercase()}" }).removePrefix("-")
+            if (key.contains("Bom") || key.contains("bom")) {
+                builder.appendLine("    implementation(platform(libs.$libKey))")
+            } else {
+                builder.appendLine("    implementation(libs.$libKey)")
+            }
+        }
+        
+        // Test dependencies
+        manifest.testDependencies.forEach { (key, _) ->
+            val libKey = key.replace(Regex("[A-Z]"), { "-${it.value.lowercase()}" }).removePrefix("-")
+            builder.appendLine("    testImplementation(libs.$libKey)")
+        }
+    }
+    
+    private fun generateTraditionalBuildGradle(manifest: KpmManifest, lockfile: KpmLockfile): String {
         val builder = StringBuilder()
         
         // Plugins
@@ -221,15 +345,49 @@ class GradleGenerator {
     fun generateSettingsGradle(manifest: KpmManifest): String {
         val builder = StringBuilder()
         
-        builder.appendLine("rootProject.name = \"${manifest.project.name}\"")
-        builder.appendLine()
-        builder.appendLine("pluginManagement {")
-        builder.appendLine("    repositories {")
-        builder.appendLine("        gradlePluginPortal()")
-        builder.appendLine("        google()")
-        builder.appendLine("        mavenCentral()")
-        builder.appendLine("    }")
-        builder.appendLine("}")
+        // For Android projects, use modern structure with version catalog
+        if (manifest.project.type == ProjectType.ANDROID_APP || manifest.project.type == ProjectType.ANDROID_LIBRARY) {
+            builder.appendLine("pluginManagement {")
+            builder.appendLine("    repositories {")
+            builder.appendLine("        google {")
+            builder.appendLine("            content {")
+            builder.appendLine("                includeGroupByRegex(\"com\\\\.android.*\")")
+            builder.appendLine("                includeGroupByRegex(\"com\\\\.google.*\")")
+            builder.appendLine("                includeGroupByRegex(\"androidx.*\")")
+            builder.appendLine("            }")
+            builder.appendLine("        }")
+            builder.appendLine("        mavenCentral()")
+            builder.appendLine("        gradlePluginPortal()")
+            builder.appendLine("    }")
+            builder.appendLine("}")
+            builder.appendLine()
+            builder.appendLine("dependencyResolutionManagement {")
+            builder.appendLine("    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)")
+            builder.appendLine("    repositories {")
+            builder.appendLine("        google()")
+            builder.appendLine("        mavenCentral()")
+            builder.appendLine("    }")
+            builder.appendLine("    versionCatalogs {")
+            builder.appendLine("        create(\"libs\") {")
+            builder.appendLine("            from(files(\"kpm.toml\"))")
+            builder.appendLine("        }")
+            builder.appendLine("    }")
+            builder.appendLine("}")
+            builder.appendLine()
+            builder.appendLine("rootProject.name = \"${manifest.project.name}\"")
+            builder.appendLine("include(\":app\")")
+        } else {
+            // Non-Android projects use simpler structure
+            builder.appendLine("rootProject.name = \"${manifest.project.name}\"")
+            builder.appendLine()
+            builder.appendLine("pluginManagement {")
+            builder.appendLine("    repositories {")
+            builder.appendLine("        gradlePluginPortal()")
+            builder.appendLine("        google()")
+            builder.appendLine("        mavenCentral()")
+            builder.appendLine("    }")
+            builder.appendLine("}")
+        }
         
         return builder.toString()
     }

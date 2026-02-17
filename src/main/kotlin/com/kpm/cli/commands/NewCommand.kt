@@ -63,8 +63,30 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
         
         // Generate Gradle files
         val gradleGenerator = GradleGenerator()
-        val buildGradle = gradleGenerator.generateBuildGradle(manifest, KpmLockfile(), projectDir)
-        File(projectDir, "build.gradle.kts").writeText(buildGradle)
+        
+        if (projectType == ProjectType.ANDROID_APP || projectType == ProjectType.ANDROID_LIBRARY) {
+            // Modern multi-module structure for Android
+            val buildGradle = gradleGenerator.generateBuildGradle(manifest, KpmLockfile(), projectDir)
+            File(projectDir, "build.gradle.kts").writeText(buildGradle)
+            
+            // Generate app module build.gradle.kts
+            val appBuildGradle = gradleGenerator.generateAppBuildGradle(manifest)
+            File(projectDir, "app/build.gradle.kts").writeText(appBuildGradle)
+            
+            // Create proguard-rules.pro
+            File(projectDir, "app/proguard-rules.pro").writeText("""
+                # Add project specific ProGuard rules here.
+                # You can control the set of applied configuration files using the
+                # proguardFiles setting in build.gradle.
+                #
+                # For more details, see
+                #   http://developer.android.com/guide/developing/tools/proguard.html
+            """.trimIndent())
+        } else {
+            // Traditional single-module structure for non-Android
+            val buildGradle = gradleGenerator.generateBuildGradle(manifest, KpmLockfile(), projectDir)
+            File(projectDir, "build.gradle.kts").writeText(buildGradle)
+        }
         
         val settingsGradle = gradleGenerator.generateSettingsGradle(manifest)
         File(projectDir, "settings.gradle.kts").writeText(settingsGradle)
@@ -242,19 +264,23 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
     }
     
     private fun createProjectStructure(projectDir: File, type: ProjectType, name: String) {
-        // Create source directories
-        val srcDir = File(projectDir, "src")
-        val mainDir = File(srcDir, "main")
-        val testDir = File(srcDir, "test")
-        
         when (type) {
             ProjectType.ANDROID_APP, ProjectType.ANDROID_LIBRARY -> {
+                // Modern multi-module structure: root/app/src/main
+                val appDir = File(projectDir, "app")
+                val srcDir = File(appDir, "src")
+                val mainDir = File(srcDir, "main")
+                val testDir = File(srcDir, "test")
+                
                 File(mainDir, "kotlin").mkdirs()
                 File(mainDir, "res/layout").mkdirs()
                 File(mainDir, "res/values").mkdirs()
                 File(testDir, "kotlin").mkdirs()
                 
-                // Create AndroidManifest.xml
+                // Create app/.gitignore
+                File(appDir, ".gitignore").writeText("/build")
+                
+                // Create AndroidManifest.xml in app module
                 val androidManifest = File(mainDir, "AndroidManifest.xml")
                 val packageName = "com.example.${name.lowercase().replace("-", "").replace("_", "")}"
                 val themeStyle = if (compose) "@android:style/Theme.Material.Light.NoActionBar" else "@style/Theme.Material3.DayNight"
@@ -435,6 +461,11 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
                 """.trimIndent())
             }
             else -> {
+                // Traditional single-module structure for non-Android
+                val srcDir = File(projectDir, "src")
+                val mainDir = File(srcDir, "main")
+                val testDir = File(srcDir, "test")
+                
                 File(mainDir, "kotlin").mkdirs()
                 File(testDir, "kotlin").mkdirs()
                 
@@ -544,22 +575,31 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
     }
     
     private fun createAndroidGradleProperties(projectDir: File) {
-        val globalConfig = GlobalConfigManager().getGlobalConfig()
-        val buildOpts = globalConfig.buildOptimizations
-        
         val gradleProperties = File(projectDir, "gradle.properties")
         gradleProperties.writeText("""
+            # Project-wide Gradle settings.
+            # IDE (e.g. Android Studio) users:
+            # Gradle settings configured through the IDE *will override*
+            # any settings specified in this file.
+            # For more details on how to configure your build environment visit
+            # http://www.gradle.org/docs/current/userguide/build_environment.html
+            # Specifies the JVM arguments used for the daemon process.
+            # The setting is particularly useful for tweaking memory settings.
+            org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+            # When configured, Gradle will run in incubating parallel mode.
+            # This option should only be used with decoupled projects. For more details, visit
+            # https://developer.android.com/r/tools/gradle-multi-project-decoupled-projects
+            # org.gradle.parallel=true
+            # AndroidX package structure to make it clearer which packages are bundled with the
+            # Android operating system, and which are packaged with your app's APK
+            # https://developer.android.com/topic/libraries/support-library/androidx-rn
             android.useAndroidX=true
-            android.enableJetifier=true
-            
-            # Memory optimization for Android builds
-            org.gradle.jvmargs=-Xmx${buildOpts.maxHeapSize} -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError
-            org.gradle.parallel=${buildOpts.parallelBuilds}
-            org.gradle.caching=${buildOpts.buildCache}
-            org.gradle.configureondemand=${buildOpts.configureOnDemand}
-            
-            # Android build optimizations
-            android.enableR8.fullMode=true
+            # Kotlin code style for this project: "official" or "obsolete":
+            kotlin.code.style=official
+            # Enables namespacing of each library's R class so that its R class includes only the
+            # resources declared in the library itself and none from the library's dependencies,
+            # thereby reducing the size of the R class for that library
+            android.nonTransitiveRClass=true
         """.trimIndent())
     }
     
