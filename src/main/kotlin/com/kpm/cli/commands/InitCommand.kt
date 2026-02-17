@@ -106,14 +106,15 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
     
     private fun promptForGradleVersion(): String {
         echo("Select Gradle version:")
-        echo("  1) 8.5 (recommended)")
+        echo("  1) 8.5 (stable, recommended)")
         echo("  2) 8.6")
         echo("  3) 8.7")
         echo("  4) 8.8")
         echo("  5) 8.9")
-        echo("  6) 8.10")
-        echo("  7) Custom version")
-        print("Enter choice [1-7] (default: 1): ")
+        echo("  6) 8.10 (latest stable)")
+        echo("  7) 8.11")
+        echo("  8) Custom version")
+        print("Enter choice [1-8] (default: 1): ")
         
         val choice = readlnOrNull()?.trim() ?: "1"
         return when (choice) {
@@ -123,9 +124,13 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
             "4" -> "8.8"
             "5" -> "8.9"
             "6" -> "8.10"
-            "7" -> {
-                print("Enter Gradle version: ")
-                readlnOrNull()?.trim() ?: "8.5"
+            "7" -> "8.11"
+            "8" -> {
+                echo("Note: Valid Gradle versions are typically 7.x - 8.x")
+                print("Enter Gradle version (e.g., 8.5): ")
+                val version = readlnOrNull()?.trim() ?: "8.5"
+                echo("Using Gradle version: $version")
+                version
             }
             else -> {
                 echo("Invalid choice, using default: 8.5")
@@ -136,24 +141,30 @@ class InitCommand : Command("init", "Initialize a new KPM project") {
     
     private fun promptForAgpVersion(): String {
         echo("Select Android Gradle Plugin (AGP) version:")
-        echo("  1) 8.7.3 (recommended, compatible with Gradle 8.5+)")
-        echo("  2) 8.6.0")
-        echo("  3) 8.5.0")
-        echo("  4) 8.4.0")
-        echo("  5) 8.3.0")
-        echo("  6) Custom version")
-        print("Enter choice [1-6] (default: 1): ")
+        echo("  1) 8.7.3 (stable, recommended for Gradle 8.5+)")
+        echo("  2) 8.6.1 (compatible with Gradle 8.2+)")
+        echo("  3) 8.5.2 (compatible with Gradle 8.2+)")
+        echo("  4) 8.4.2 (compatible with Gradle 8.0+)")
+        echo("  5) 8.3.2 (compatible with Gradle 8.0+)")
+        echo("  6) 8.2.2 (compatible with Gradle 8.0+)")
+        echo("  7) Custom version")
+        print("Enter choice [1-7] (default: 1): ")
         
         val choice = readlnOrNull()?.trim() ?: "1"
         return when (choice) {
             "1", "" -> "8.7.3"
-            "2" -> "8.6.0"
-            "3" -> "8.5.0"
-            "4" -> "8.4.0"
-            "5" -> "8.3.0"
-            "6" -> {
-                print("Enter AGP version: ")
-                readlnOrNull()?.trim() ?: "8.7.3"
+            "2" -> "8.6.1"
+            "3" -> "8.5.2"
+            "4" -> "8.4.2"
+            "5" -> "8.3.2"
+            "6" -> "8.2.2"
+            "7" -> {
+                echo("Note: Latest stable AGP versions are in the 8.x range (e.g., 8.7.3)")
+                echo("AGP 9.x and higher are not yet released")
+                print("Enter AGP version (e.g., 8.7.3): ")
+                val version = readlnOrNull()?.trim() ?: "8.7.3"
+                echo("Using AGP version: $version")
+                version
             }
             else -> {
                 echo("Invalid choice, using default: 8.7.3")
