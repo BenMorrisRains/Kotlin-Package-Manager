@@ -1,12 +1,14 @@
 package com.kpm.cli.commands
 
-import com.kpm.cli.Command
-import com.kpm.cli.echo
-import com.kpm.config.TomlParser
-import com.kpm.config.GlobalConfigManager
-import com.kpm.gradle.GradleGenerator
+import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.arguments.argument
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.option
 import com.kpm.model.*
-import com.kpm.android.AndroidSdkManager
+import com.kpm.config.TomlParser
+import com.kpm.gradle.GradleGenerator
+import com.kpm.config.GlobalConfigManager
+import com.kpm.cli.ProgressIndicator
 import java.io.File
 
 class NewCommand : Command("new", "Create a new project with smart defaults") {
@@ -49,20 +51,34 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
         } else null
         
         echo("")
-        projectDir.mkdirs()
         
-        // Create manifest with smart defaults
-        val manifest = createSmartManifest(name, projectType, gradleVersion, agpVersion)
+        val progress = ProgressIndicator("Creating project structure...")
+        progress.start()
         
-        // Create project structure
-        createProjectStructure(projectDir, projectType, name)
+        try {
+            projectDir.mkdirs()
+            
+            // Create manifest with smart defaults
+            val manifest = createSmartManifest(name, projectType, gradleVersion, agpVersion)
+            
+            // Create project structure
+            createProjectStructure(projectDir, projectType, name)
+            progress.succeed("Project structure created")
+        } catch (e: Exception) {
+            progress.fail("Failed to create project structure")
+            throw e
+        }
         
         // Generate kpm.toml
         val tomlParser = TomlParser()
         tomlParser.writeManifest(manifest, File(projectDir, "kpm.toml"))
         
         // Generate Gradle files
-        val gradleGenerator = GradleGenerator()
+        val gradleProgress = ProgressIndicator("Generating Gradle build files...")
+        gradleProgress.start()
+        
+        try {
+            val gradleGenerator = GradleGenerator()
         
         if (projectType == ProjectType.ANDROID_APP || projectType == ProjectType.ANDROID_LIBRARY) {
             // Modern multi-module structure for Android
@@ -88,11 +104,25 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
             File(projectDir, "build.gradle.kts").writeText(buildGradle)
         }
         
-        val settingsGradle = gradleGenerator.generateSettingsGradle(manifest)
-        File(projectDir, "settings.gradle.kts").writeText(settingsGradle)
+            val settingsGradle = gradleGenerator.generateSettingsGradle(manifest)
+            File(projectDir, "settings.gradle.kts").writeText(settingsGradle)
+            
+            gradleProgress.succeed("Gradle build files generated")
+        } catch (e: Exception) {
+            gradleProgress.fail("Failed to generate Gradle files")
+            throw e
+        }
         
         // Generate Gradle wrapper
-        gradleGenerator.generateGradleWrapper(projectDir, manifest.project.gradleVersion)
+        val wrapperProgress = ProgressIndicator("Setting up Gradle wrapper...")
+        wrapperProgress.start()
+        try {
+            gradleGenerator.generateGradleWrapper(projectDir, manifest.project.gradleVersion)
+            wrapperProgress.succeed("Gradle wrapper configured")
+        } catch (e: Exception) {
+            wrapperProgress.fail("Failed to setup Gradle wrapper")
+            throw e
+        }
         
         // Create empty lockfile
         tomlParser.writeLockfile(KpmLockfile(), File(projectDir, "kpm.lock"))
@@ -196,11 +226,19 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
     private fun createSmartManifest(name: String, type: ProjectType, gradleVersion: String, agpVersion: String?): KpmManifest {
         val globalConfig = GlobalConfigManager().getGlobalConfig()
         
+        // For Android projects with Compose, ensure Kotlin 2.0+ for compatibility
+        val kotlinVersion = when {
+            type == ProjectType.ANDROID_APP || type == ProjectType.ANDROID_LIBRARY -> {
+                globalConfig.defaultKotlinVersion?.takeIf { it >= "2.0.0" } ?: "2.1.0"
+            }
+            else -> globalConfig.defaultKotlinVersion ?: "2.1.0"
+        }
+        
         val project = ProjectConfig(
             name = name,
             version = "0.1.0",
             type = type,
-            kotlinVersion = globalConfig.defaultKotlinVersion ?: "2.1.0",
+            kotlinVersion = kotlinVersion,
             gradleVersion = gradleVersion,
             agpVersion = agpVersion
         )
