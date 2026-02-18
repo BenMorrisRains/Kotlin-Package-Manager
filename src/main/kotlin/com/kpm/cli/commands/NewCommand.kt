@@ -160,26 +160,25 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
     
     private fun promptForGradleVersion(): String {
         echo("Select Gradle version:")
-        echo("  1) 8.5 (stable, recommended)")
-        echo("  2) 8.6")
-        echo("  3) 8.7")
-        echo("  4) 8.8")
-        echo("  5) 8.9")
-        echo("  6) 8.10 (latest stable)")
-        echo("  7) 8.11")
-        echo("  8) Custom version")
-        print("Enter choice [1-8] (default: 1): ")
+        echo("  1) 8.9 (stable, recommended for AGP 8.6+)")
+        echo("  2) 8.10 (latest stable)")
+        echo("  3) 8.11")
+        echo("  4) 8.7")
+        echo("  5) 8.6")
+        echo("  6) 8.5")
+        echo("  7) Custom version")
+        echo("")
         
-        val choice = readlnOrNull()?.trim() ?: "1"
+        val choice = readLine()?.trim()?.takeIf { it.isNotEmpty() } ?: "1"
+        
         return when (choice) {
-            "1", "" -> "8.5"
-            "2" -> "8.6"
-            "3" -> "8.7"
-            "4" -> "8.8"
-            "5" -> "8.9"
-            "6" -> "8.10"
-            "7" -> "8.11"
-            "8" -> {
+            "1" -> "8.9"
+            "2" -> "8.10"
+            "3" -> "8.11"
+            "4" -> "8.7"
+            "5" -> "8.6"
+            "6" -> "8.5"
+            "7" -> {
                 echo("Note: Valid Gradle versions are typically 7.x - 8.x")
                 print("Enter Gradle version (e.g., 8.5): ")
                 val version = readlnOrNull()?.trim() ?: "8.5"
@@ -187,27 +186,28 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
                 version
             }
             else -> {
-                echo("Invalid choice, using default: 8.5")
-                "8.5"
+                echo("Invalid choice, using default: 8.9")
+                "8.9"
             }
         }
     }
     
     private fun promptForAgpVersion(): String {
         echo("Select Android Gradle Plugin (AGP) version:")
-        echo("  1) 8.7.3 (stable, recommended for Gradle 8.5+)")
-        echo("  2) 8.6.1 (compatible with Gradle 8.2+)")
+        echo("  1) 8.6.1 (stable, recommended for Gradle 8.5)")
+        echo("  2) 8.7.3 (requires Gradle 8.9+)")
         echo("  3) 8.5.2 (compatible with Gradle 8.2+)")
         echo("  4) 8.4.2 (compatible with Gradle 8.0+)")
         echo("  5) 8.3.2 (compatible with Gradle 8.0+)")
         echo("  6) 8.2.2 (compatible with Gradle 8.0+)")
         echo("  7) Custom version")
-        print("Enter choice [1-7] (default: 1): ")
+        echo("")
         
-        val choice = readlnOrNull()?.trim() ?: "1"
+        val choice = readLine()?.trim()?.takeIf { it.isNotEmpty() } ?: "1"
+        
         return when (choice) {
-            "1", "" -> "8.7.3"
-            "2" -> "8.6.1"
+            "1" -> "8.6.1"
+            "2" -> "8.7.3"
             "3" -> "8.5.2"
             "4" -> "8.4.2"
             "5" -> "8.3.2"

@@ -98,8 +98,8 @@ class GradleGenerator {
         builder.appendLine("    }")
         builder.appendLine()
         builder.appendLine("    compileOptions {")
-        builder.appendLine("        sourceCompatibility = JavaVersion.VERSION_11")
-        builder.appendLine("        targetCompatibility = JavaVersion.VERSION_11")
+        builder.appendLine("        sourceCompatibility = JavaVersion.VERSION_17")
+        builder.appendLine("        targetCompatibility = JavaVersion.VERSION_17")
         builder.appendLine("    }")
         
         if (hasCompose) {
@@ -115,7 +115,8 @@ class GradleGenerator {
     private fun generateModernDependencies(manifest: KpmManifest, builder: StringBuilder) {
         // Main dependencies using version catalog aliases
         manifest.dependencies.forEach { (key, _) ->
-            val libKey = key.replace(Regex("[A-Z]"), { "-${it.value.lowercase()}" }).removePrefix("-")
+            // Keep camelCase for Kotlin DSL compatibility (no hyphens)
+            val libKey = key.replaceFirstChar { it.lowercase() }
             if (key.contains("Bom") || key.contains("bom")) {
                 builder.appendLine("    implementation(platform(libs.$libKey))")
             } else {
@@ -125,7 +126,8 @@ class GradleGenerator {
         
         // Test dependencies
         manifest.testDependencies.forEach { (key, _) ->
-            val libKey = key.replace(Regex("[A-Z]"), { "-${it.value.lowercase()}" }).removePrefix("-")
+            // Keep camelCase for Kotlin DSL compatibility (no hyphens)
+            val libKey = key.replaceFirstChar { it.lowercase() }
             builder.appendLine("    testImplementation(libs.$libKey)")
         }
     }
@@ -357,12 +359,13 @@ class GradleGenerator {
         (manifest.dependencies + manifest.testDependencies).forEach { (key, coordinates) ->
             val parts = coordinates.split(":")
             if (parts.size >= 3) {
-                val versionKey = key.replace(Regex("[A-Z]"), { "-${it.value.lowercase()}" }).removePrefix("-")
+                // Keep camelCase for Kotlin DSL compatibility (no hyphens)
+                val versionKey = key.replaceFirstChar { it.lowercase() }
                 versions[versionKey] = parts[2]
                 libraries[versionKey] = Triple(parts[0], parts[1], versionKey)
             } else if (parts.size == 2) {
                 // BOM member without version
-                val libKey = key.replace(Regex("[A-Z]"), { "-${it.value.lowercase()}" }).removePrefix("-")
+                val libKey = key.replaceFirstChar { it.lowercase() }
                 libraries[libKey] = Triple(parts[0], parts[1], "")
             }
         }
