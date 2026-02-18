@@ -1,14 +1,13 @@
 package com.kpm.cli.commands
 
-import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.arguments.argument
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.option
+import com.kpm.cli.Command
+import com.kpm.cli.echo
 import com.kpm.model.*
 import com.kpm.config.TomlParser
 import com.kpm.gradle.GradleGenerator
 import com.kpm.config.GlobalConfigManager
 import com.kpm.cli.ProgressIndicator
+import com.kpm.android.AndroidSdkManager
 import java.io.File
 
 class NewCommand : Command("new", "Create a new project with smart defaults") {
@@ -462,6 +461,11 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
                 }
             }
             ProjectType.KTOR_API -> {
+                // Traditional single-module structure for non-Android
+                val srcDir = File(projectDir, "src")
+                val mainDir = File(srcDir, "main")
+                val testDir = File(srcDir, "test")
+                
                 File(mainDir, "kotlin").mkdirs()
                 File(testDir, "kotlin").mkdirs()
                 
