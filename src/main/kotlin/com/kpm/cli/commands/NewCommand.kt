@@ -79,25 +79,31 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
         
         try {
             if (projectType == ProjectType.ANDROID_APP || projectType == ProjectType.ANDROID_LIBRARY) {
-            // Modern multi-module structure for Android
-            val buildGradle = gradleGenerator.generateBuildGradle(manifest, KpmLockfile(), projectDir)
-            File(projectDir, "build.gradle.kts").writeText(buildGradle)
-            
-            // Generate app module build.gradle.kts
-            val appBuildGradle = gradleGenerator.generateAppBuildGradle(manifest)
-            File(projectDir, "app/build.gradle.kts").writeText(appBuildGradle)
-            
-            // Create proguard-rules.pro
-            File(projectDir, "app/proguard-rules.pro").writeText("""
-                # Add project specific ProGuard rules here.
-                # You can control the set of applied configuration files using the
-                # proguardFiles setting in build.gradle.
-                #
-                # For more details, see
-                #   http://developer.android.com/guide/developing/tools/proguard.html
-            """.trimIndent())
-        } else {
-            // Traditional single-module structure for non-Android
+                // Modern multi-module structure for Android
+                val buildGradle = gradleGenerator.generateBuildGradle(manifest, KpmLockfile(), projectDir)
+                File(projectDir, "build.gradle.kts").writeText(buildGradle)
+                
+                // Generate app module build.gradle.kts
+                val appBuildGradle = gradleGenerator.generateAppBuildGradle(manifest)
+                File(projectDir, "app/build.gradle.kts").writeText(appBuildGradle)
+                
+                // Generate gradle/libs.versions.toml for version catalog
+                val libsVersionsToml = gradleGenerator.generateLibsVersionsToml(manifest)
+                val gradleDir = File(projectDir, "gradle")
+                gradleDir.mkdirs()
+                File(gradleDir, "libs.versions.toml").writeText(libsVersionsToml)
+                
+                // Create proguard-rules.pro
+                File(projectDir, "app/proguard-rules.pro").writeText("""
+                    # Add project specific ProGuard rules here.
+                    # You can control the set of applied configuration files using the
+                    # proguardFiles setting in build.gradle.
+                    #
+                    # For more details, see
+                    #   http://developer.android.com/guide/developing/tools/proguard.html
+                """.trimIndent())
+            } else {
+                // Traditional single-module structure for non-Android
                 val buildGradle = gradleGenerator.generateBuildGradle(manifest, KpmLockfile(), projectDir)
                 File(projectDir, "build.gradle.kts").writeText(buildGradle)
             }

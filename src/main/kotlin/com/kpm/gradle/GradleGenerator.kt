@@ -342,6 +342,63 @@ class GradleGenerator {
         }
     }
     
+    fun generateLibsVersionsToml(manifest: KpmManifest): String {
+        val builder = StringBuilder()
+        
+        // Extract versions from dependencies
+        val versions = mutableMapOf<String, String>()
+        val libraries = mutableMapOf<String, Triple<String, String, String>>()
+        
+        // Add core versions
+        manifest.project.agpVersion?.let { versions["agp"] = it }
+        versions["kotlin"] = manifest.project.kotlinVersion
+        
+        // Process dependencies
+        (manifest.dependencies + manifest.testDependencies).forEach { (key, coordinates) ->
+            val parts = coordinates.split(":")
+            if (parts.size >= 3) {
+                val versionKey = key.replace(Regex("[A-Z]"), { "-${it.value.lowercase()}" }).removePrefix("-")
+                versions[versionKey] = parts[2]
+                libraries[versionKey] = Triple(parts[0], parts[1], versionKey)
+            } else if (parts.size == 2) {
+                // BOM member without version
+                val libKey = key.replace(Regex("[A-Z]"), { "-${it.value.lowercase()}" }).removePrefix("-")
+                libraries[libKey] = Triple(parts[0], parts[1], "")
+            }
+        }
+        
+        // [versions] section
+        builder.appendLine("[versions]")
+        versions.forEach { (key, version) ->
+            builder.appendLine("$key = \"$version\"")
+        }
+        builder.appendLine()
+        
+        // [libraries] section
+        builder.appendLine("[libraries]")
+        libraries.forEach { (key, info) ->
+            val (group, name, versionRef) = info
+            if (versionRef.isNotEmpty()) {
+                builder.appendLine("$key = { group = \"$group\", name = \"$name\", version.ref = \"$versionRef\" }")
+            } else {
+                builder.appendLine("$key = { group = \"$group\", name = \"$name\" }")
+            }
+        }
+        builder.appendLine()
+        
+        // [plugins] section
+        builder.appendLine("[plugins]")
+        manifest.project.agpVersion?.let {
+            val pluginType = if (manifest.project.type == ProjectType.ANDROID_APP) "application" else "library"
+            builder.appendLine("android-$pluginType = { id = \"com.android.$pluginType\", version.ref = \"agp\" }")
+        }
+        builder.appendLine("kotlin-android = { id = \"org.jetbrains.kotlin.android\", version.ref = \"kotlin\" }")
+        builder.appendLine("kotlin-compose = { id = \"org.jetbrains.kotlin.plugin.compose\", version.ref = \"kotlin\" }")
+        builder.appendLine()
+        
+        return builder.toString()
+    }
+    
     fun generateSettingsGradle(manifest: KpmManifest): String {
         val builder = StringBuilder()
         
@@ -367,12 +424,8 @@ class GradleGenerator {
             builder.appendLine("        google()")
             builder.appendLine("        mavenCentral()")
             builder.appendLine("    }")
-            builder.appendLine("    versionCatalogs {")
-            builder.appendLine("        create(\"libs\") {")
-            builder.appendLine("            from(files(\"kpm.toml\"))")
-            builder.appendLine("        }")
-            builder.appendLine("    }")
             builder.appendLine("}")
+            builder.appendLine("    // Version catalog is auto-detected from gradle/libs.versions.toml")
             builder.appendLine()
             builder.appendLine("rootProject.name = \"${manifest.project.name}\"")
             builder.appendLine("include(\":app\")")
