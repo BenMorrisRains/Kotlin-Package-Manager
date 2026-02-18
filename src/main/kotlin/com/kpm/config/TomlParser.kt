@@ -147,17 +147,18 @@ class TomlParser {
             builder.appendLine()
         }
         
-        if (manifest.plugins.isNotEmpty()) {
+        // Add Gradle Version Catalog sections for modern Android projects
+        val isAndroidProject = manifest.project.type == ProjectType.ANDROID_APP || manifest.project.type == ProjectType.ANDROID_LIBRARY
+        
+        if (isAndroidProject) {
+            addVersionCatalogSections(builder, manifest)
+        } else if (manifest.plugins.isNotEmpty()) {
+            // Only add KPM-specific plugins section for non-Android projects
             builder.appendLine("[plugins]")
             manifest.plugins.forEach { (key, value) ->
                 builder.appendLine("$key = \"$value\"")
             }
             builder.appendLine()
-        }
-        
-        // Add Gradle Version Catalog sections for modern Android projects
-        if (manifest.project.type == ProjectType.ANDROID_APP || manifest.project.type == ProjectType.ANDROID_LIBRARY) {
-            addVersionCatalogSections(builder, manifest)
         }
         
         return builder.toString()
