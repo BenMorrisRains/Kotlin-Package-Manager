@@ -52,15 +52,15 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
         
         echo("")
         
+        projectDir.mkdirs()
+        
+        // Create manifest with smart defaults
+        val manifest = createSmartManifest(name, projectType, gradleVersion, agpVersion)
+        
         val progress = ProgressIndicator("Creating project structure...")
         progress.start()
         
         try {
-            projectDir.mkdirs()
-            
-            // Create manifest with smart defaults
-            val manifest = createSmartManifest(name, projectType, gradleVersion, agpVersion)
-            
             // Create project structure
             createProjectStructure(projectDir, projectType, name)
             progress.succeed("Project structure created")
@@ -74,13 +74,12 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
         tomlParser.writeManifest(manifest, File(projectDir, "kpm.toml"))
         
         // Generate Gradle files
+        val gradleGenerator = GradleGenerator()
         val gradleProgress = ProgressIndicator("Generating Gradle build files...")
         gradleProgress.start()
         
         try {
-            val gradleGenerator = GradleGenerator()
-        
-        if (projectType == ProjectType.ANDROID_APP || projectType == ProjectType.ANDROID_LIBRARY) {
+            if (projectType == ProjectType.ANDROID_APP || projectType == ProjectType.ANDROID_LIBRARY) {
             // Modern multi-module structure for Android
             val buildGradle = gradleGenerator.generateBuildGradle(manifest, KpmLockfile(), projectDir)
             File(projectDir, "build.gradle.kts").writeText(buildGradle)
@@ -100,10 +99,10 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
             """.trimIndent())
         } else {
             // Traditional single-module structure for non-Android
-            val buildGradle = gradleGenerator.generateBuildGradle(manifest, KpmLockfile(), projectDir)
-            File(projectDir, "build.gradle.kts").writeText(buildGradle)
-        }
-        
+                val buildGradle = gradleGenerator.generateBuildGradle(manifest, KpmLockfile(), projectDir)
+                File(projectDir, "build.gradle.kts").writeText(buildGradle)
+            }
+            
             val settingsGradle = gradleGenerator.generateSettingsGradle(manifest)
             File(projectDir, "settings.gradle.kts").writeText(settingsGradle)
             
