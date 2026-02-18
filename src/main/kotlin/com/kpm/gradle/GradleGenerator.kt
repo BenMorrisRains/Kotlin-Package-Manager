@@ -101,6 +101,10 @@ class GradleGenerator {
         builder.appendLine("        sourceCompatibility = JavaVersion.VERSION_17")
         builder.appendLine("        targetCompatibility = JavaVersion.VERSION_17")
         builder.appendLine("    }")
+        builder.appendLine()
+        builder.appendLine("    kotlinOptions {")
+        builder.appendLine("        jvmTarget = \"17\"")
+        builder.appendLine("    }")
         
         if (hasCompose) {
             builder.appendLine()
