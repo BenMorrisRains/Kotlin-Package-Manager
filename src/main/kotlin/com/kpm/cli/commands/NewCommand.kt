@@ -615,8 +615,23 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
         
         // Regenerate Gradle files
         val gradleGenerator = GradleGenerator()
-        val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, KpmLockfile(), projectDir)
-        File(projectDir, "build.gradle.kts").writeText(buildGradle)
+        
+        if (manifest.project.type == ProjectType.ANDROID_APP || manifest.project.type == ProjectType.ANDROID_LIBRARY) {
+            // Modern multi-module structure - regenerate all build files
+            val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, KpmLockfile(), projectDir)
+            File(projectDir, "build.gradle.kts").writeText(buildGradle)
+            
+            val appBuildGradle = gradleGenerator.generateAppBuildGradle(updatedManifest)
+            File(projectDir, "app/build.gradle.kts").writeText(appBuildGradle)
+            
+            // Regenerate libs.versions.toml with new dependencies
+            val libsVersionsToml = gradleGenerator.generateLibsVersionsToml(updatedManifest)
+            File(projectDir, "gradle/libs.versions.toml").writeText(libsVersionsToml)
+        } else {
+            // Traditional structure
+            val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, KpmLockfile(), projectDir)
+            File(projectDir, "build.gradle.kts").writeText(buildGradle)
+        }
         
         echo("✅ Compose dependencies added")
     }
