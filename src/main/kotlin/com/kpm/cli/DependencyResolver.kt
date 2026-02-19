@@ -40,6 +40,25 @@ object DependencyResolver {
             val dep = try {
                 resolveShorthand(searchTerm)
             } catch (e: Exception) {
+                // Check if user requested new search from selection menu
+                if (e.message == "User requested new search") {
+                    print("Enter new search term: ")
+                    val newTerm = readLine()?.trim()
+                    if (newTerm.isNullOrBlank()) {
+                        echo("No search term provided. Aborting.")
+                        return null
+                    }
+                    searchTerm = newTerm
+                    continue
+                }
+                
+                // Check if it was an invalid selection
+                if (e.message == "Invalid selection") {
+                    // Retry the same search
+                    continue
+                }
+                
+                // Artifact not found
                 echo("")
                 echo("Could not find artifact '$searchTerm'.")
                 print("Would you like to search with a different term? (y/n): ")
@@ -59,33 +78,9 @@ object DependencyResolver {
                 }
             }
             
-            // Confirm the found dependency
-            echo("")
-            echo("Found: ${dep.coordinates}")
-            print("Is this the correct dependency? (y/n/s for search again): ")
-            
-            val response = readLine()?.trim()?.lowercase()
-            when (response) {
-                "y", "yes" -> return dep
-                "n", "no" -> {
-                    echo("Dependency not added.")
-                    return null
-                }
-                "s", "search" -> {
-                    print("Enter new search term: ")
-                    val newTerm = readLine()?.trim()
-                    if (newTerm.isNullOrBlank()) {
-                        echo("No search term provided. Aborting.")
-                        return null
-                    }
-                    searchTerm = newTerm
-                    continue
-                }
-                else -> {
-                    echo("Invalid response. Dependency not added.")
-                    return null
-                }
-            }
+            // User already selected from the list, so just return the dependency
+            // No need for additional confirmation
+            return dep
         }
     }
     
@@ -96,10 +91,11 @@ object DependencyResolver {
     private fun resolveShorthand(shorthand: String): Dependency {
         val mavenApi = MavenSearchApi()
         
-        // First check well-known artifacts for instant resolution
+        // First check well-known artifacts
         val wellKnown = mavenApi.getWellKnownArtifact(shorthand)
         if (wellKnown != null) {
             echo("Found well-known artifact: ${wellKnown.groupId}:${wellKnown.artifactId}")
+            echo("")
             return Dependency(
                 group = wellKnown.groupId,
                 artifact = wellKnown.artifactId,
@@ -109,15 +105,37 @@ object DependencyResolver {
         
         // Try to search Maven Central for the artifact
         echo("Searching Maven Central for '$shorthand'...")
-        val searchResult = mavenApi.findPopularArtifact(shorthand)
+        val searchResults = mavenApi.searchArtifact(shorthand)
         
-        if (searchResult != null) {
-            echo("✅ Found: ${searchResult.groupId}:${searchResult.artifactId}:${searchResult.latestVersion}")
-            return Dependency(
-                group = searchResult.groupId,
-                artifact = searchResult.artifactId,
-                version = searchResult.latestVersion
-            )
+        if (searchResults.isNotEmpty()) {
+            // Show top 5 results
+            val topResults = searchResults.take(5)
+            echo("")
+            echo("Found ${searchResults.size} results. Select one:")
+            topResults.forEachIndexed { index, artifact ->
+                echo("  ${index + 1}) ${artifact.groupId}:${artifact.artifactId}:${artifact.latestVersion}")
+            }
+            echo("")
+            
+            print("Enter selection (1-${topResults.size}) or 's' to search again: ")
+            val selection = readLine()?.trim()
+            
+            if (selection == "s" || selection == "search") {
+                throw IllegalArgumentException("User requested new search")
+            }
+            
+            val selectedIndex = selection?.toIntOrNull()?.minus(1)
+            if (selectedIndex != null && selectedIndex in topResults.indices) {
+                val selected = topResults[selectedIndex]
+                return Dependency(
+                    group = selected.groupId,
+                    artifact = selected.artifactId,
+                    version = selected.latestVersion
+                )
+            } else {
+                echo("Invalid selection.")
+                throw IllegalArgumentException("Invalid selection")
+            }
         }
         
         // Fallback to common shorthand mappings
