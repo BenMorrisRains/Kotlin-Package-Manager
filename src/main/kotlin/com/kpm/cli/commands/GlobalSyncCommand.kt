@@ -75,8 +75,23 @@ class GlobalSyncCommand : Command("sync-global", "Sync local project with global
             }
             
             val gradleGenerator = GradleGenerator()
-            val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, lockfile, currentDir)
-            File(currentDir, "build.gradle.kts").writeText(buildGradle)
+            
+            if (updatedManifest.project.type.toString().contains("ANDROID")) {
+                // Modern multi-module structure - regenerate all build files
+                val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, lockfile, currentDir)
+                File(currentDir, "build.gradle.kts").writeText(buildGradle)
+                
+                val appBuildGradle = gradleGenerator.generateAppBuildGradle(updatedManifest)
+                File(currentDir, "app/build.gradle.kts").writeText(appBuildGradle)
+                
+                // Regenerate libs.versions.toml with synced dependencies
+                val libsVersionsToml = gradleGenerator.generateLibsVersionsToml(updatedManifest)
+                File(currentDir, "gradle/libs.versions.toml").writeText(libsVersionsToml)
+            } else {
+                // Traditional structure
+                val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, lockfile, currentDir)
+                File(currentDir, "build.gradle.kts").writeText(buildGradle)
+            }
             
             // Show summary
             echo("✅ Project synced with global dependencies!")
