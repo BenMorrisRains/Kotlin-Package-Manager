@@ -1,6 +1,7 @@
 package com.kpm.cli.commands
 
 import com.kpm.cli.Command
+import com.kpm.cli.DependencyResolver
 import com.kpm.cli.echo
 import com.kpm.config.TomlParser
 import com.kpm.gradle.GradleGenerator
@@ -27,22 +28,8 @@ class AddCommand : Command("add", "Add a dependency to the project") {
         val tomlParser = TomlParser()
         val manifest = tomlParser.parseManifest(manifestFile)
         
-        // Parse dependency
-        val dep = try {
-            if (":" in dependency) {
-                val parsed = Dependency.parse(dependency)
-                if (!confirmDependency(parsed, dependency)) {
-                    return
-                }
-                parsed
-            } else {
-                // Try to resolve shorthand with confirmation
-                resolveShorthandDependencyInteractive(dependency) ?: return
-            }
-        } catch (e: Exception) {
-            echo("Error: Invalid dependency format. Use group:artifact:version or just artifact name", err = true)
-            return
-        }
+        // Parse dependency using shared resolver
+        val dep = DependencyResolver.resolveDependencyInteractive(dependency) ?: return
         
         // Add to appropriate section
         val updatedManifest = when {
@@ -133,138 +120,6 @@ class AddCommand : Command("add", "Add a dependency to the project") {
             }
         } else {
             echo("Gradle wrapper not found. Run 'gradle wrapper' to complete setup.")
-        }
-    }
-    
-    private fun resolveShorthandDependency(shorthand: String): Dependency {
-        val mavenApi = MavenSearchApi()
-        
-        // First check well-known artifacts for instant resolution
-        val wellKnown = mavenApi.getWellKnownArtifact(shorthand)
-        if (wellKnown != null) {
-            echo("Found well-known artifact: ${wellKnown.groupId}:${wellKnown.artifactId}")
-            return Dependency(
-                group = wellKnown.groupId,
-                artifact = wellKnown.artifactId,
-                version = wellKnown.latestVersion
-            )
-        }
-        
-        // Try to search Maven Central for the artifact
-        echo("Searching Maven Central for '$shorthand'...")
-        val searchResult = mavenApi.findPopularArtifact(shorthand)
-        
-        if (searchResult != null) {
-            echo("✅ Found: ${searchResult.groupId}:${searchResult.artifactId}:${searchResult.latestVersion}")
-            return Dependency(
-                group = searchResult.groupId,
-                artifact = searchResult.artifactId,
-                version = searchResult.latestVersion
-            )
-        }
-        
-        // Fallback to common shorthand mappings
-        val commonDependencies = mapOf(
-            "junit" to "junit:junit:4.13.2",
-            "mockito" to "org.mockito:mockito-core:5.7.0",
-            "gson" to "com.google.code.gson:gson:2.10.1",
-            "retrofit" to "com.squareup.retrofit2:retrofit:2.9.0",
-            "okhttp" to "com.squareup.okhttp3:okhttp:4.12.0",
-            "picasso" to "com.squareup.picasso:picasso:2.8",
-            "glide" to "com.github.bumptech.glide:glide:4.16.0",
-            "coroutines" to "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3",
-            "serialization" to "org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0",
-            "ktor-client" to "io.ktor:ktor-client-core:2.3.6",
-            "ktor-server" to "io.ktor:ktor-server-core:2.3.6",
-            "compose-bom" to "androidx.compose:compose-bom:2024.10.00",
-            "compose-ui" to "androidx.compose.ui:ui:1.5.4",
-            "compose-material3" to "androidx.compose.material3:material3:1.1.2",
-            "hilt" to "com.google.dagger:hilt-android:2.48",
-            "room" to "androidx.room:room-runtime:2.6.1",
-            "navigation" to "androidx.navigation:navigation-compose:2.7.5"
-        )
-        
-        val coordinates = commonDependencies[shorthand.lowercase()]
-        if (coordinates != null) {
-            echo("📚 Using built-in mapping for '$shorthand'")
-            return Dependency.parse(coordinates)
-        }
-        
-        throw IllegalArgumentException("Could not find artifact '$shorthand' in Maven Central or built-in mappings")
-    }
-    
-    private fun confirmDependency(dep: Dependency, originalInput: String): Boolean {
-        echo("")
-        echo("Found dependency: ${dep.coordinates}")
-        print("Add this dependency? (y/n): ")
-        
-        val response = readLine()?.trim()?.lowercase()
-        return when (response) {
-            "y", "yes" -> true
-            "n", "no" -> {
-                echo("Dependency not added.")
-                false
-            }
-            else -> {
-                echo("Invalid response. Dependency not added.")
-                false
-            }
-        }
-    }
-    
-    private fun resolveShorthandDependencyInteractive(shorthand: String): Dependency? {
-        var searchTerm = shorthand
-        
-        while (true) {
-            val dep = try {
-                resolveShorthandDependency(searchTerm)
-            } catch (e: Exception) {
-                echo("")
-                echo("Could not find artifact '$searchTerm'.")
-                print("Would you like to search with a different term? (y/n): ")
-                
-                val retry = readLine()?.trim()?.lowercase()
-                if (retry == "y" || retry == "yes") {
-                    print("Enter search term: ")
-                    val newTerm = readLine()?.trim()
-                    if (newTerm.isNullOrBlank()) {
-                        echo("No search term provided. Aborting.")
-                        return null
-                    }
-                    searchTerm = newTerm
-                    continue
-                } else {
-                    return null
-                }
-            }
-            
-            // Confirm the found dependency
-            echo("")
-            echo("Found: ${dep.coordinates}")
-            print("Is this the correct dependency? (y/n/s for search again): ")
-            
-            val response = readLine()?.trim()?.lowercase()
-            when (response) {
-                "y", "yes" -> return dep
-                "n", "no" -> {
-                    echo("Dependency not added.")
-                    return null
-                }
-                "s", "search" -> {
-                    print("Enter new search term: ")
-                    val newTerm = readLine()?.trim()
-                    if (newTerm.isNullOrBlank()) {
-                        echo("No search term provided. Aborting.")
-                        return null
-                    }
-                    searchTerm = newTerm
-                    continue
-                }
-                else -> {
-                    echo("Invalid response. Dependency not added.")
-                    return null
-                }
-            }
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.kpm.cli.commands
 
 import com.kpm.cli.Command
+import com.kpm.cli.DependencyResolver
 import com.kpm.cli.echo
 import com.kpm.config.GlobalConfigManager
 import com.kpm.maven.MavenSearchApi
@@ -182,116 +183,31 @@ class ConfigCommand : Command("config", "Manage global KPM configuration") {
     private fun addGlobalDependency(configManager: GlobalConfigManager, name: String, versionOrCoordinate: String) {
         val currentConfig = configManager.getGlobalConfig()
         
-        // Check if it's a full coordinate (group:artifact:version) or npm-style name
-        val (finalName, finalCoordinate) = if (versionOrCoordinate.contains(":")) {
-            // Full coordinate provided (e.g., "timber com.jakewharton.timber:timber:5.0.1")
-            name to versionOrCoordinate
+        // Use shared DependencyResolver for consistent behavior with kpm add
+        val input = if (versionOrCoordinate.contains(":")) {
+            // Full coordinate provided
+            versionOrCoordinate
         } else {
-            // npm-style: try to resolve the name (e.g., "timber 5.0.1" or just "timber")
-            val resolvedCoordinate = resolveNpmStyleDependency(name, versionOrCoordinate)
-            if (resolvedCoordinate != null) {
-                name to resolvedCoordinate
-            } else {
-                echo("❌ Could not resolve dependency: $name", err = true)
-                echo("Try using full coordinates: kpm config add-global $name group:artifact:version")
-                return
-            }
+            // Just the name provided - use it as shorthand
+            name
+        }
+        
+        val dep = DependencyResolver.resolveDependencyInteractive(input)
+        if (dep == null) {
+            echo("Global dependency not added.")
+            return
         }
         
         val updatedDependencies = currentConfig.globalDependencies.copy(
-            alwaysInclude = currentConfig.globalDependencies.alwaysInclude + (finalName to finalCoordinate)
+            alwaysInclude = currentConfig.globalDependencies.alwaysInclude + (dep.artifact to dep.coordinates)
         )
         val updatedConfig = currentConfig.copy(globalDependencies = updatedDependencies)
         configManager.saveGlobalConfig(updatedConfig)
-        echo("✅ Added global dependency: $finalName = \"$finalCoordinate\"")
+        echo("✅ Added global dependency: ${dep.artifact} = \"${dep.coordinates}\"")
         echo("This dependency will be included in all new projects")
         echo("")
         echo("💡 To add this dependency to existing projects, run:")
         echo("   kpm sync-global")
-    }
-    
-    private fun resolveNpmStyleDependency(name: String, version: String?): String? {
-        // First try the known popular libraries map (like AddCommand does)
-        val popularLibraries = mapOf(
-            "picasso" to "com.squareup.picasso:picasso",
-            "glide" to "com.github.bumptech.glide:glide", 
-            "retrofit" to "com.squareup.retrofit2:retrofit",
-            "okhttp" to "com.squareup.okhttp3:okhttp",
-            "gson" to "com.google.code.gson:gson",
-            "hilt" to "com.google.dagger:hilt-android",
-            "room" to "androidx.room:room-runtime",
-            "coroutines" to "org.jetbrains.kotlinx:kotlinx-coroutines-android",
-            "timber" to "com.jakewharton.timber:timber",
-            "junit" to "junit:junit",
-            "mockito" to "org.mockito:mockito-core",
-            "lottie" to "com.airbnb.android:lottie",
-            "material" to "com.google.android.material:material",
-            "appcompat" to "androidx.appcompat:appcompat",
-            "coreKtx" to "androidx.core:core-ktx",
-            "constraintlayout" to "androidx.constraintlayout:constraintlayout",
-            "recyclerview" to "androidx.recyclerview:recyclerview",
-            "cardview" to "androidx.cardview:cardview",
-            "viewpager2" to "androidx.viewpager2:viewpager2",
-            "fragment" to "androidx.fragment:fragment-ktx",
-            "activity" to "androidx.activity:activity-ktx",
-            "lifecycle" to "androidx.lifecycle:lifecycle-viewmodel-ktx",
-            "navigation" to "androidx.navigation:navigation-fragment-ktx",
-            "workmanager" to "androidx.work:work-runtime-ktx",
-            "datastore" to "androidx.datastore:datastore-preferences",
-            "paging" to "androidx.paging:paging-runtime",
-            "camera" to "androidx.camera:camera-camera2",
-            "biometric" to "androidx.biometric:biometric",
-            "compose-bom" to "androidx.compose:compose-bom",
-            "compose-ui" to "androidx.compose.ui:ui",
-            "compose-material3" to "androidx.compose.material3:material3",
-            "compose-activity" to "androidx.activity:activity-compose",
-            "compose-viewmodel" to "androidx.lifecycle:lifecycle-viewmodel-compose",
-            "compose-navigation" to "androidx.navigation:navigation-compose",
-            "ktor-server" to "io.ktor:ktor-server-core",
-            "ktor-netty" to "io.ktor:ktor-server-netty",
-            "ktor-client" to "io.ktor:ktor-client-core",
-            "exposed" to "org.jetbrains.exposed:exposed-core",
-            "koin" to "io.insert-koin:koin-android",
-            "coil" to "io.coil-kt:coil",
-            "leakcanary" to "com.squareup.leakcanary:leakcanary-android"
-        )
-        
-        val baseCoordinate = popularLibraries[name.lowercase()]
-        if (baseCoordinate != null) {
-            // If version is provided and not empty, use it; otherwise get latest
-            return if (!version.isNullOrEmpty() && version != name) {
-                "$baseCoordinate:$version"
-            } else {
-                // Get latest version from Maven Central
-                try {
-                    val searchApi = MavenSearchApi()
-                    val parts = baseCoordinate.split(":")
-                    val latestVersion = searchApi.getLatestVersion(parts[0], parts[1])
-                    if (latestVersion != null) {
-                        "$baseCoordinate:$latestVersion"
-                    } else {
-                        null
-                    }
-                } catch (e: Exception) {
-                    echo("⚠️  Could not fetch latest version for $name, using known coordinate")
-                    null
-                }
-            }
-        }
-        
-        // If not in popular libraries, try searching Maven Central
-        try {
-            val searchApi = MavenSearchApi()
-            val results = searchApi.searchArtifact(name)
-            if (results.isNotEmpty()) {
-                val result = results.first()
-                return "${result.groupId}:${result.artifactId}:${result.latestVersion}"
-            }
-        } catch (e: Exception) {
-            // Search failed, return null
-        }
-        
-        return null
     }
     
     private fun removeGlobalDependency(configManager: GlobalConfigManager, name: String) {
