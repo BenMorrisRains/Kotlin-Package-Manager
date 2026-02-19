@@ -108,33 +108,68 @@ object DependencyResolver {
         val searchResults = mavenApi.searchArtifact(shorthand)
         
         if (searchResults.isNotEmpty()) {
-            // Show top 5 results
-            val topResults = searchResults.take(5)
-            echo("")
-            echo("Found ${searchResults.size} results. Select one:")
-            topResults.forEachIndexed { index, artifact ->
-                echo("  ${index + 1}) ${artifact.groupId}:${artifact.artifactId}:${artifact.latestVersion}")
-            }
-            echo("")
+            // Paginate through results, 5 at a time
+            var currentPage = 0
+            val pageSize = 5
+            val totalPages = (searchResults.size + pageSize - 1) / pageSize
             
-            print("Enter selection (1-${topResults.size}) or 's' to search again: ")
-            val selection = readLine()?.trim()
-            
-            if (selection == "s" || selection == "search") {
-                throw IllegalArgumentException("User requested new search")
-            }
-            
-            val selectedIndex = selection?.toIntOrNull()?.minus(1)
-            if (selectedIndex != null && selectedIndex in topResults.indices) {
-                val selected = topResults[selectedIndex]
-                return Dependency(
-                    group = selected.groupId,
-                    artifact = selected.artifactId,
-                    version = selected.latestVersion
-                )
-            } else {
-                echo("Invalid selection.")
-                throw IllegalArgumentException("Invalid selection")
+            while (true) {
+                val startIndex = currentPage * pageSize
+                val endIndex = minOf(startIndex + pageSize, searchResults.size)
+                val pageResults = searchResults.subList(startIndex, endIndex)
+                
+                echo("")
+                echo("Found ${searchResults.size} results. Showing ${startIndex + 1}-${endIndex} (Page ${currentPage + 1}/$totalPages):")
+                pageResults.forEachIndexed { index, artifact ->
+                    echo("  ${index + 1}) ${artifact.groupId}:${artifact.artifactId}:${artifact.latestVersion}")
+                }
+                echo("")
+                
+                val options = mutableListOf("Enter selection (1-${pageResults.size})")
+                if (currentPage < totalPages - 1) options.add("'n' for next page")
+                if (currentPage > 0) options.add("'p' for previous page")
+                options.add("'s' to search again")
+                
+                print("${options.joinToString(", ")}: ")
+                val selection = readLine()?.trim()?.lowercase()
+                
+                when (selection) {
+                    "s", "search" -> {
+                        throw IllegalArgumentException("User requested new search")
+                    }
+                    "n", "next" -> {
+                        if (currentPage < totalPages - 1) {
+                            currentPage++
+                            continue
+                        } else {
+                            echo("Already on last page.")
+                            continue
+                        }
+                    }
+                    "p", "prev", "previous" -> {
+                        if (currentPage > 0) {
+                            currentPage--
+                            continue
+                        } else {
+                            echo("Already on first page.")
+                            continue
+                        }
+                    }
+                    else -> {
+                        val selectedIndex = selection?.toIntOrNull()?.minus(1)
+                        if (selectedIndex != null && selectedIndex in pageResults.indices) {
+                            val selected = pageResults[selectedIndex]
+                            return Dependency(
+                                group = selected.groupId,
+                                artifact = selected.artifactId,
+                                version = selected.latestVersion
+                            )
+                        } else {
+                            echo("Invalid selection.")
+                            continue
+                        }
+                    }
+                }
             }
         }
         
