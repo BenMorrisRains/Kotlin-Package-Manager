@@ -58,11 +58,26 @@ class RemoveCommand : Command("remove", "Remove a dependency from the project") 
         val lockfile = tomlParser.parseLockfile(lockfileFile)
         
         val gradleGenerator = GradleGenerator()
-        val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, lockfile, currentDir)
-        File(currentDir, "build.gradle.kts").writeText(buildGradle)
+        
+        if (updatedManifest.project.type == ProjectType.ANDROID_APP || updatedManifest.project.type == ProjectType.ANDROID_LIBRARY) {
+            // Modern multi-module structure - regenerate all build files
+            val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, lockfile, currentDir)
+            File(currentDir, "build.gradle.kts").writeText(buildGradle)
+            
+            val appBuildGradle = gradleGenerator.generateAppBuildGradle(updatedManifest)
+            File(currentDir, "app/build.gradle.kts").writeText(appBuildGradle)
+            
+            // Regenerate libs.versions.toml without removed dependency
+            val libsVersionsToml = gradleGenerator.generateLibsVersionsToml(updatedManifest)
+            File(currentDir, "gradle/libs.versions.toml").writeText(libsVersionsToml)
+        } else {
+            // Traditional structure
+            val buildGradle = gradleGenerator.generateBuildGradle(updatedManifest, lockfile, currentDir)
+            File(currentDir, "build.gradle.kts").writeText(buildGradle)
+        }
         
         echo("✅ Removed dependency: $dependency")
-        echo("Updated build.gradle.kts")
+        echo("Updated Gradle build files")
         
         echo("✅ Dependency removal completed")
     }
