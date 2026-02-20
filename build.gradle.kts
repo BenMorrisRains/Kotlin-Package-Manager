@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.kpm"
-version = "1.2.1"
+version = "1.0.0-alpha.1"
 
 repositories {
     mavenCentral()
