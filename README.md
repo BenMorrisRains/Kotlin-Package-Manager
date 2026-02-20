@@ -9,8 +9,6 @@ A modern package manager for Kotlin projects with zero third-party dependencies.
 - **Zero Dependencies**: No external libraries required
 - **Android First**: Full Android SDK integration and Compose support
 - **NPM-Like Experience**: `kpm add picasso` automatically resolves latest versions
-- **Smart Search**: Live Maven Central API integration
-- **Custom CLI Framework**: Built-in command-line interface
 - **Custom TOML Parser**: Parse project manifests without external deps
 - **Gradle Integration**: Automatic build.gradle.kts generation and sync
 - **Project Templates**: Initialize projects with sensible defaults
@@ -75,7 +73,7 @@ kpm new MyApp
 kpm new MyLib --android --library
 ```
 
-### NPM-Like Dependency Management
+### Dependency Management
 
 ```bash
 # Add dependencies by name (automatically finds latest version)
@@ -104,7 +102,7 @@ kpm run                 # Run your application
 kpm test                # Run tests
 ```
 
-### Global Configuration (npm/bun/pip-like)
+### Global Configuration
 
 ```bash
 # Initialize global configuration
@@ -378,20 +376,6 @@ kpm build
 kpm run                 # Server starts on http://localhost:8080
 ```
 
-## Comparison with Other Tools
-
-| Feature | KPM | Gradle | Maven |
-|---------|-----|--------|-------|
-| **Setup Time** | Instant | Manual setup required | Manual setup required |
-| **Android Support** | Built-in SDK detection | Manual configuration | Limited support |
-| **Dependency Resolution** | `kpm add picasso` | Manual coordinates | Manual coordinates |
-| **Zero Config** | Yes | No | No |
-| **Live Search** | Yes - Maven Central API | No | No |
-| **Auto Gradle Sync** | Yes | Manual | N/A |
-| **Global Configuration** | Yes - npm/bun/pip-like | No | No |
-| **Global Dependencies** | Yes - `config add-global` | No | No |
-| **IDE Auto-Sync** | Yes - IntelliJ/VS Code/Android Studio | No | No |
-
 ## Contributing
 
 1. Fork the repository
@@ -399,25 +383,6 @@ kpm run                 # Server starts on http://localhost:8080
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-## Recently Completed
-
-- [x] **Global Configuration**: npm/bun/pip-like global config system
-- [x] **Global Dependencies**: `kpm config add-global` for dependencies in all projects
-- [x] **Custom Registries**: Support for corporate/private Maven repositories
-- [x] **Memory Optimization**: Automatic gradle.properties with build optimizations
-- [x] **Android Compose Support**: Full scaffolding with proper build configuration
-- [x] **IDE Auto-Sync**: Automatic IDE Gradle sync after dependency changes
-
-## Roadmap
-
-- [ ] **Version Management**: `kpm update` with semantic versioning
-- [ ] **Dependency Graph**: Visual dependency analysis
-- [ ] **Plugin System**: Custom build plugins
-- [ ] **Multi-Module Support**: Gradle multi-project builds
-- [ ] **IDE Integration**: IntelliJ IDEA and Android Studio plugins
-- [ ] **Publishing**: `kpm publish` to Maven Central
-- [ ] **Lockfile Validation**: Security and integrity checks
 
 ## License
 
