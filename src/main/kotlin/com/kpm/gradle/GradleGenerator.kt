@@ -199,6 +199,11 @@ class GradleGenerator {
             ProjectType.MULTIPLATFORM_LIBRARY -> {
                 builder.appendLine("    kotlin(\"multiplatform\") version \"${manifest.project.kotlinVersion}\"")
             }
+            ProjectType.COMPOSE_MULTIPLATFORM -> {
+                builder.appendLine("    kotlin(\"multiplatform\") version \"${manifest.project.kotlinVersion}\"")
+                builder.appendLine("    id(\"org.jetbrains.compose\") version \"1.10.0\"")
+                addComposePlugin(manifest.project.kotlinVersion, builder)
+            }
             ProjectType.KTOR_API -> {
                 builder.appendLine("    kotlin(\"jvm\") version \"${manifest.project.kotlinVersion}\"")
                 builder.appendLine("    application")

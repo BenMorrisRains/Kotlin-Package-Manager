@@ -1,0 +1,146 @@
+name: Auto Release on Version Bump
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  check-and-release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history to compare versions
+    
+    - name: Extract current version from build.gradle.kts
+      id: current_version
+      run: |
+        VERSION=$(grep '^version = ' build.gradle.kts | sed 's/version = "\(.*\)"/\1/')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "📦 Current version: $VERSION"
+    
+    - name: Extract previous version from main
+      id: previous_version
+      run: |
+        git checkout HEAD~1 build.gradle.kts 2>/dev/null || echo "First commit"
+        PREV_VERSION=$(grep '^version = ' build.gradle.kts | sed 's/version = "\(.*\)"/\1/' || echo "none")
+        git checkout HEAD build.gradle.kts
+        echo "version=$PREV_VERSION" >> $GITHUB_OUTPUT
+        echo "📦 Previous version: $PREV_VERSION"
+    
+    - name: Check if version was bumped
+      id: version_check
+      run: |
+        CURRENT="${{ steps.current_version.outputs.version }}"
+        PREVIOUS="${{ steps.previous_version.outputs.version }}"
+        
+        if [ "$CURRENT" != "$PREVIOUS" ]; then
+          echo "bumped=true" >> $GITHUB_OUTPUT
+          echo "✅ Version was bumped from $PREVIOUS to $CURRENT"
+        else
+          echo "bumped=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ Version was not changed"
+        fi
+    
+    - name: Set up JDK 17
+      if: steps.version_check.outputs.bumped == 'true'
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Gradle
+      if: steps.version_check.outputs.bumped == 'true'
+      uses: gradle/gradle-build-action@v2
+    
+    - name: Build and test
+      if: steps.version_check.outputs.bumped == 'true'
+      run: |
+        ./gradlew build
+        ./gradlew test
+    
+    - name: Create and push tag
+      if: steps.version_check.outputs.bumped == 'true'
+      run: |
+        VERSION="${{ steps.current_version.outputs.version }}"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Create tag
+        git tag -a "v$VERSION" -m "Release v$VERSION"
+        git push origin "v$VERSION"
+        
+        echo "✅ Created and pushed tag v$VERSION"
+    
+    - name: Create GitHub Release
+      if: steps.version_check.outputs.bumped == 'true'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.current_version.outputs.version }}
+        generate_release_notes: true
+        body: |
+          ## Installation
+          
+          ### Homebrew (macOS/Linux)
+          ```bash
+          brew install BenMorrisRains/kpm/kpm
+          ```
+          
+          ### Manual Installation
+          ```bash
+          curl -L https://github.com/BenMorrisRains/Kotlin-Package-Manager/archive/v${{ steps.current_version.outputs.version }}.tar.gz | tar xz
+          cd Kotlin-Package-Manager-${{ steps.current_version.outputs.version }}
+          ./gradlew installDist
+          export PATH="$PWD/build/install/kpm/bin:$PATH"
+          ```
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Calculate SHA256 from GitHub source archive
+      if: steps.version_check.outputs.bumped == 'true'
+      run: |
+        VERSION="${{ steps.current_version.outputs.version }}"
+        
+        # Wait a moment for GitHub to generate the source archive
+        sleep 5
+        
+        # Download the source archive that GitHub automatically creates
+        curl -L https://github.com/BenMorrisRains/Kotlin-Package-Manager/archive/v$VERSION.tar.gz -o kpm-$VERSION.tar.gz
+        
+        # Calculate SHA256
+        SHA256=$(shasum -a 256 kpm-$VERSION.tar.gz | cut -d' ' -f1)
+        echo "SHA256=$SHA256" >> $GITHUB_ENV
+        echo "📦 Source archive SHA256: $SHA256"
+    
+    - name: Update Homebrew Formula
+      if: steps.version_check.outputs.bumped == 'true'
+      run: |
+        VERSION="${{ steps.current_version.outputs.version }}"
+        echo "🍺 Updating Homebrew formula..."
+        
+        # Clone homebrew-kpm repository
+        git clone https://github.com/BenMorrisRains/homebrew-kpm.git /tmp/homebrew-kpm
+        cd /tmp/homebrew-kpm
+        
+        # Configure git
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        # Update the formula
+        sed -i "s|archive/v.*\.tar\.gz|archive/v$VERSION.tar.gz|g" kpm.rb
+        sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/g" kpm.rb
+        
+        # Commit and push changes
+        git add kpm.rb
+        git commit -m "Update KPM to v$VERSION" || echo "No changes to commit"
+        git push https://x-access-token:${{ secrets.HOMEBREW_TAP_TOKEN }}@github.com/BenMorrisRains/homebrew-kpm.git main
+        
+        echo "✅ Homebrew formula updated successfully!"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

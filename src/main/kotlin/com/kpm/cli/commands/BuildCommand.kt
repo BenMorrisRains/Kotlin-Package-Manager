@@ -30,6 +30,7 @@ class BuildCommand : Command("build", "Build the project") {
             ProjectType.JVM_APPLICATION -> "build"
             ProjectType.JVM_LIBRARY -> "build"
             ProjectType.MULTIPLATFORM_LIBRARY -> "build"
+            ProjectType.COMPOSE_MULTIPLATFORM -> "build"
             ProjectType.KTOR_API -> "build"
         }
         

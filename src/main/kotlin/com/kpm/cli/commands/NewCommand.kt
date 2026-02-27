@@ -18,8 +18,22 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
     private val ktor by option("ktor", "Create Ktor API server").flag()
     private val library by option("library", "Create library instead of application").flag()
     
+    // Compose Multiplatform flags
+    private val cmp by option("cmp", "Create Compose Multiplatform project").flag()
+    private val ios by option("ios", "Include iOS target (CMP only)").flag()
+    private val desktop by option("desktop", "Include Desktop target (CMP only)").flag()
+    private val web by option("web", "Include Web target (CMP only)").flag()
+    private val wasm by option("wasm", "Include WebAssembly target (CMP only)").flag()
+    private val server by option("server", "Include Ktor server module (CMP only)").flag()
+    
     override fun run() {
         val name = projectName
+        
+        // Handle Compose Multiplatform project creation
+        if (cmp) {
+            createComposeMultiplatformProject()
+            return
+        }
         
         // Determine project type based on flags
         val projectType = when {
@@ -155,6 +169,7 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
             ProjectType.JVM_LIBRARY -> "JVM library"
             ProjectType.KTOR_API -> "Ktor API server"
             ProjectType.MULTIPLATFORM_LIBRARY -> "Multiplatform library"
+            ProjectType.COMPOSE_MULTIPLATFORM -> "Compose Multiplatform"
         }
     }
     
@@ -694,5 +709,18 @@ class NewCommand : Command("new", "Create a new project with smart defaults") {
             }
         }
         echo("")
+    }
+    
+    private fun createComposeMultiplatformProject() {
+        val scaffolder = ComposeMultiplatformScaffolder(
+            projectName = projectName,
+            android = android,
+            ios = ios,
+            desktop = desktop,
+            web = web,
+            wasm = wasm,
+            server = server
+        )
+        scaffolder.create()
     }
 }

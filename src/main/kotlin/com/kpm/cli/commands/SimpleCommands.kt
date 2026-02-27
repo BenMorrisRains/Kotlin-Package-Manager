@@ -11,6 +11,11 @@ import java.io.File
 class RemoveCommand : Command("remove", "Remove a dependency from the project") {
     private val dependency by argument("dependency", "Dependency name or coordinates")
     
+    // CMP source set flags
+    private val androidMain by option("android-main", "Remove from androidMain.dependencies (CMP only)").flag()
+    private val commonMain by option("common-main", "Remove from commonMain.dependencies (CMP only)").flag()
+    private val commonTest by option("common-test", "Remove from commonTest.dependencies (CMP only)").flag()
+    
     override fun run() {
         val currentDir = File(System.getProperty("user.dir"))
         val manifestFile = File(currentDir, "kpm.toml")
@@ -22,6 +27,20 @@ class RemoveCommand : Command("remove", "Remove a dependency from the project") 
         
         val tomlParser = TomlParser()
         val manifest = tomlParser.parseManifest(manifestFile)
+        
+        // Check if CMP-specific flags are used
+        val isCmpFlag = androidMain || commonMain || commonTest
+        if (isCmpFlag && manifest.project.type != ProjectType.COMPOSE_MULTIPLATFORM) {
+            echo("Error: CMP source set flags (--android-main, --common-main, --common-test) can only be used with Compose Multiplatform projects.", err = true)
+            echo("This project type is: ${manifest.project.type}")
+            return
+        }
+        
+        // Handle CMP source set dependencies differently
+        if (isCmpFlag) {
+            removeCmpSourceSetDependency(currentDir, manifest, manifestFile, tomlParser)
+            return
+        }
         
         // Find and remove dependency from all sections
         val updatedManifest = manifest.copy(
@@ -80,6 +99,134 @@ class RemoveCommand : Command("remove", "Remove a dependency from the project") 
         echo("Updated Gradle build files")
         
         echo("✅ Dependency removal completed")
+    }
+    
+    private fun removeCmpSourceSetDependency(currentDir: File, manifest: KpmManifest, manifestFile: File, tomlParser: TomlParser) {
+        // Determine which source set to remove from
+        val sourceSet = when {
+            androidMain -> "androidMain"
+            commonMain -> "commonMain"
+            commonTest -> "commonTest"
+            else -> {
+                echo("Error: No CMP source set specified", err = true)
+                return
+            }
+        }
+        
+        // Find the composeApp module build.gradle.kts
+        val composeAppBuildFile = File(currentDir, "composeApp/build.gradle.kts")
+        if (!composeAppBuildFile.exists()) {
+            echo("Error: composeApp/build.gradle.kts not found. Is this a valid CMP project?", err = true)
+            return
+        }
+        
+        // Read the current build file
+        var buildContent = composeAppBuildFile.readText()
+        
+        // Find the source set dependencies block
+        val sourceSetPattern = """$sourceSet\.dependencies\s*\{""".toRegex()
+        val match = sourceSetPattern.find(buildContent)
+        
+        if (match == null) {
+            echo("Error: Could not find $sourceSet.dependencies block in composeApp/build.gradle.kts", err = true)
+            return
+        }
+        
+        // Find all implementation lines in this source set
+        val blockStart = match.range.last + 1
+        var braceCount = 1
+        var blockEnd = blockStart
+        
+        for (i in blockStart until buildContent.length) {
+            when (buildContent[i]) {
+                '{' -> braceCount++
+                '}' -> {
+                    braceCount--
+                    if (braceCount == 0) {
+                        blockEnd = i
+                        break
+                    }
+                }
+            }
+        }
+        
+        // Extract the dependencies block content
+        val blockContent = buildContent.substring(blockStart, blockEnd)
+        
+        // Find and remove lines containing the dependency
+        val lines = blockContent.split('\n').toMutableList()
+        var removed = false
+        
+        // Match both direct coordinates and version catalog references
+        // e.g., implementation("group:artifact:version") or implementation(libs.artifact.name)
+        val catalogKey = dependency.replace("-", ".")
+        val directPattern = """implementation\(["'].*${Regex.escape(dependency)}.*["']\)""".toRegex()
+        val catalogPattern = """implementation\(libs\.${Regex.escape(catalogKey)}\)""".toRegex()
+        
+        val filteredLines = lines.filter { line ->
+            val shouldRemove = directPattern.containsMatchIn(line) || catalogPattern.containsMatchIn(line)
+            if (shouldRemove) removed = true
+            !shouldRemove
+        }
+        
+        if (!removed) {
+            echo("❌ Dependency not found in $sourceSet: $dependency", err = true)
+            return
+        }
+        
+        // Reconstruct the build file
+        val newBlockContent = filteredLines.joinToString("\n")
+        buildContent = buildContent.substring(0, blockStart) + newBlockContent + buildContent.substring(blockEnd)
+        
+        // Write back to file
+        composeAppBuildFile.writeText(buildContent)
+        
+        // Remove from kpm.toml manifest
+        val updatedManifest = manifest.copy(
+            dependencies = manifest.dependencies.filterNot { (key, value) -> 
+                key == dependency || value.contains(dependency)
+            }
+        )
+        tomlParser.writeManifest(updatedManifest, manifestFile)
+        
+        // Remove from libs.versions.toml
+        val libsVersionsFile = File(currentDir, "gradle/libs.versions.toml")
+        if (libsVersionsFile.exists()) {
+            removeFromLibsVersionsToml(libsVersionsFile, dependency)
+        }
+        
+        echo("✅ Removed dependency from $sourceSet: $dependency")
+        echo("Updated kpm.toml, composeApp/build.gradle.kts, and gradle/libs.versions.toml")
+    }
+    
+    private fun removeFromLibsVersionsToml(libsVersionsFile: File, dependency: String) {
+        val content = libsVersionsFile.readText()
+        val lines = content.split("\n").toMutableList()
+        
+        // Create possible keys from dependency name
+        val artifact = dependency.substringAfterLast(":")
+        val camelCase = artifact.split("-").mapIndexed { index, part ->
+            if (index == 0) part else part.replaceFirstChar { it.uppercase() }
+        }.joinToString("")
+        
+        val possibleKeys = listOf(
+            artifact,  // kebab-case for library key
+            camelCase,  // camelCase for version key
+            dependency.substringAfterLast("/")
+        )
+        
+        // Remove from [versions] section
+        lines.removeAll { line ->
+            possibleKeys.any { key -> line.trim().startsWith("$key =") }
+        }
+        
+        // Remove from [libraries] section
+        lines.removeAll { line ->
+            possibleKeys.any { key -> line.trim().startsWith("$key =") }
+        }
+        
+        // Write back to file
+        libsVersionsFile.writeText(lines.joinToString("\n"))
     }
 }
 
