@@ -74,6 +74,7 @@ kpm-*.tar.gz
 # Test projects and temporary files
 *Test*/
 *App*/
+!src/test/
 TestGlobal/
 GlobalTestApp/
 MemoryTestApp/

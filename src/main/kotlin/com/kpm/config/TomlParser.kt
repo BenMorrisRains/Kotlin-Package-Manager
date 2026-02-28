@@ -89,6 +89,7 @@ class TomlParser {
             "jvm_application", "jvm-application" -> ProjectType.JVM_APPLICATION
             "jvm_library", "jvm-library" -> ProjectType.JVM_LIBRARY
             "multiplatform_library", "multiplatform-library" -> ProjectType.MULTIPLATFORM_LIBRARY
+            "compose_multiplatform", "compose-multiplatform" -> ProjectType.COMPOSE_MULTIPLATFORM
             "ktor_api", "ktor-api" -> ProjectType.KTOR_API
             else -> error("Unknown project type: $type")
         }

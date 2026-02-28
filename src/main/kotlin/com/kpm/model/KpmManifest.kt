@@ -26,6 +26,7 @@ enum class ProjectType {
     JVM_APPLICATION,
     JVM_LIBRARY,
     MULTIPLATFORM_LIBRARY,
+    COMPOSE_MULTIPLATFORM,
     KTOR_API
 }
 
