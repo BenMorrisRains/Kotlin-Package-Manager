@@ -8,6 +8,7 @@ A modern package manager for Kotlin projects with zero third-party dependencies.
 
 - **Zero Dependencies**: No external libraries required
 - **Android First**: Full Android SDK integration and Compose support
+- **Compose Multiplatform**: Create cross-platform apps for Android, iOS, Desktop, Web, and WASM
 - **NPM-Like Experience**: `kpm add picasso` automatically resolves latest versions
 - **Custom TOML Parser**: Parse project manifests without external deps
 - **Gradle Integration**: Automatic build.gradle.kts generation and sync
@@ -63,6 +64,12 @@ export PATH="$PATH:$(pwd)/build/install/kpm/bin"
 # Android app with Compose UI
 kpm new MyApp --android --compose
 
+# Compose Multiplatform app (shorthand with --cmp)
+kpm new MyApp --cmp --android --ios --desktop
+
+# Compose Multiplatform with all platforms
+kpm new MyApp --cmp --android --ios --desktop --web --wasm
+
 # Ktor API server
 kpm new MyAPI --ktor
 
@@ -87,6 +94,11 @@ kpm add mockito --test
 
 # Traditional coordinates still work
 kpm add androidx.compose:compose-bom:2024.10.00
+
+# Compose Multiplatform: Add to specific source sets
+kpm add ktor-client --common-main      # Add to commonMain
+kpm add androidx.core:core-ktx --android-main  # Add to androidMain only
+kpm add junit --common-test            # Add to commonTest
 
 # Search for libraries
 kpm search image         # Find image loading libraries
@@ -162,6 +174,32 @@ my-android-app/
     └── test/kotlin/
 ```
 
+### Compose Multiplatform Application
+```
+my-cmp-app/
+├── kpm.toml                    # Project manifest
+├── kpm.lock                    # Dependency lockfile
+├── build.gradle.kts            # Root build file
+├── settings.gradle.kts         # Multi-module settings
+├── gradle/
+│   └── libs.versions.toml      # Version catalog
+├── composeApp/
+│   ├── build.gradle.kts        # Compose app module
+│   └── src/
+│       ├── commonMain/          # Shared code
+│       ├── commonTest/          # Shared tests
+│       ├── androidMain/         # Android-specific
+│       ├── iosMain/             # iOS-specific
+│       ├── jvmMain/             # Desktop-specific
+│       ├── jsMain/              # Web JS-specific
+│       └── wasmJsMain/          # WASM-specific
+├── iosApp/                      # iOS Xcode project
+│   └── iosApp.xcodeproj/
+└── server/                      # Optional Ktor server
+    ├── build.gradle.kts
+    └── src/main/kotlin/
+```
+
 ### Global Configuration File
 ```
 ~/.kpm/config.toml      # Global user configuration
@@ -224,13 +262,25 @@ junit = "junit:junit:4.13.2"
 
 ### Project Creation
 - `kpm new <name> [--android] [--compose] [--ktor] [--library]` - Create project with smart defaults
+- `kpm new <name> --cmp --android --ios --desktop` - Create Compose Multiplatform project
+- `kpm new <name> --cmp --android --ios --desktop --web --wasm --server` - Create CMP with all platforms
 - `kpm init --name <name> --type <type>` - Initialize project (advanced)
 
 ### Dependency Management
+
+**Standard Projects:**
 - `kpm add <name>` - Add dependency by name (npm-like)
 - `kpm add <group:artifact:version>` - Add dependency with full coordinates
 - `kpm add <dependency> --test` - Add as test dependency
 - `kpm remove <dependency>` - Remove a dependency
+
+**Compose Multiplatform Projects:**
+- `kpm add <dependency> --common-main` - Add to commonMain source set
+- `kpm add <dependency> --android-main` - Add to androidMain source set
+- `kpm add <dependency> --common-test` - Add to commonTest source set
+- `kpm remove <dependency> --common-main` - Remove from commonMain source set
+
+**Search:**
 - `kpm search <query>` - Search Maven Central for dependencies
 
 ### Build & Run
@@ -307,6 +357,26 @@ kpm new MyApp --android --compose
 # - Proper build configuration
 ```
 
+### Compose Multiplatform Support
+```bash
+# Create cross-platform app with Android + iOS + Desktop
+kpm new MyApp --cmp --android --ios --desktop
+
+# Add Web and WASM support
+kpm new MyApp --cmp --android --ios --desktop --web --wasm
+
+# Include Ktor server module
+kpm new MyApp --cmp --android --ios --desktop --server
+
+# Automatically configures:
+# - Kotlin Multiplatform plugin
+# - Compose Multiplatform plugin
+# - Platform-specific source sets
+# - iOS Xcode project
+# - Gradle version catalog (libs.versions.toml)
+# - Proper dependency management for each platform
+```
+
 ## Popular Libraries (NPM-Style)
 
 KPM knows about 40+ popular libraries for instant resolution:
@@ -328,7 +398,38 @@ KPM knows about 40+ popular libraries for instant resolution:
 
 *Don't see your library? KPM will search Maven Central automatically!*
 
-## Complete Workflow Example
+## Complete Workflow Examples
+
+### Compose Multiplatform App (Cross-Platform)
+
+```bash
+# 1. Create a cross-platform app for Android, iOS, and Desktop
+kpm new PhotoApp --cmp --android --ios --desktop
+cd PhotoApp
+
+# 2. Add shared dependencies (available on all platforms)
+kpm add ktor-client --common-main           # HTTP client
+kpm add kotlinx-serialization --common-main # JSON serialization
+kpm add kotlinx-coroutines --common-main    # Async programming
+
+# 3. Add platform-specific dependencies
+kpm add androidx.core:core-ktx --android-main  # Android utilities
+
+# 4. Add testing dependencies
+kpm add junit --common-test
+kpm add kotlin-test --common-test
+
+# 5. Build and run
+kpm build               # Builds for all platforms
+kpm run                 # Run on current platform
+
+# Project structure:
+# composeApp/src/
+#   ├── commonMain/     ← Shared code (UI, business logic)
+#   ├── androidMain/    ← Android-specific code
+#   ├── iosMain/        ← iOS-specific code
+#   └── jvmMain/        ← Desktop-specific code
+```
 
 ### Android App with Modern Stack
 
